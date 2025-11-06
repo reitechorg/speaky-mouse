@@ -1,5 +1,5 @@
 model Labels {
-	id			String		@id @default(uuid())
+	id			String		@id @default(cuid())
 	projectId	String		@map("project_id")
 	name		String
 	color		String
@@ -10,8 +10,15 @@ model Labels {
 	@@map("labels")
 }
 
+enum NotTranslatedExportMode {
+	KEEP_ORIGINAL	// Keep the original string from the source language
+	EMPTY_STRING	// Export an empty string
+	SKIP_STRING		// Do not include the string in the export
+	FAIL_EXPORT		// Fail the export process
+}
+
 model SourceFile {
-	id			String		@id @default(uuid())
+	id			String		@id @default(cuid())
 	title		String
 
 	importPath	String		@map("import_path")
@@ -25,6 +32,7 @@ model SourceFile {
 	targetLanguages	SourceFileTargetLanguage[]
 	localeStrings	LocaleString[]
 
+	notTranslatedStringExportMode	NotTranslatedExportMode	@map("export_not_translated")	@default(KEEP_ORIGINAL)
 
 	@@map("source_files")
 }
@@ -39,19 +47,12 @@ model SourceFileTargetLanguage {
 	@@map("source_file_target_languages")
 }
 
-enum LocaleStringState {
-	NOT_TRANSLATED
-	NOT_APPROVED
-	APPROVED
-}
-
 model LocaleString {
-	id				String				@id @default(uuid())
+	id				String				@id @default(cuid())
 	key				String
 	content			String
 	maxLength		Int?				@map("max_length")
 	sourceFileId	String				@map("source_file_id")
-	state			LocaleStringState	@default(NOT_TRANSLATED)
 
 	labels			Labels[]		@relation("LocaleStringLabels")
 	sourceFile		SourceFile		@relation(fields: [sourceFileId], references: [id], onUpdate: Cascade, onDelete: Cascade)
@@ -61,7 +62,7 @@ model LocaleString {
 }
 
 model Translation {
-	id				String				@id @default(uuid())
+	id				String				@id @default(cuid())
 	localeStringId	String				@map("locale_string_id")
 	language		String				@map("language_code") @db.Char(2)
 	content			String
