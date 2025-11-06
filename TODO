@@ -1,0 +1,79 @@
+QA Checks
+
+QA checks automatically highlight all potential translation mistakes before approval. Detected issues will appear in the proofreading mode.
+
+[ ] Enable QA checks
+
+Check for:
+[ ] Empty translation
+
+-   Source is empty but the translation is not.
+-   Translation is empty but the source is not.
+
+[ ] Length issues
+
+-   Translation exceeds predefined length limits. (Limits can be set somewhere)
+
+[ ] Tags nussnatcg
+
+-   Inconsistent tags in the source and translation.
+-   ID attributes consistency
+-   CDATA tag consistency
+
+[ ] Spaces missmatch
+
+-   Spaces around special symbols
+-   Start end end spaces
+-   Start and end new line characters
+-   Multiple spaces in succession
+-   Non-breaking spaces
+
+[ ] Variables missmatch
+
+[ ] Punctuation issues
+
+-   Inconsistent punctuation in source and translation
+-   Spacing before and after punctuation marks
+
+[ ] Character case missmatch
+
+-   Initial capital letter
+-   Unexprected multiple capilalized characters in succession
+
+[ ] Special characters missmatch
+
+-   Bracet consistency
+-   Markup language entities
+-   Quotes and quote escapes
+
+[ ] Incorrect translation
+
+-   Translation marked by project members as incorrect
+
+[ ] Spelling mistakes
+
+-   Detected by integrated spell checker
+
+[ ] Number missmatch
+
+[ ] Outdated translation
+
+---
+
+Translation Memory
+Machine translation
+Pre-translate
+
+Export Path variables:
+%language% Language name (e.g. Ukrainian)
+%two_letters_code% Language code ISO 639-1 (i.e. uk)
+%three_letters_code% Language code ISO 639-2/T (i.e. ukr)
+%locale% Locale (like uk-UA)
+%locale_with_underscore% Locale (i.e. uk_UA)
+%android_code% Android Locale identifier used to name "values-" directories
+%osx_code% OS X Locale identifier used to name ".lproj" directories
+%osx_locale% OS X Locale used to name translated resources (i.e. uk, zh-Hans, zh_HK)
+%original_file_name% Original file name
+%file_name% File name without extension
+%file_extension% Original file extension
+%original_path% Use parent folders' names in your project to build the file path in the resulting archive

@@ -1,0 +1,26 @@
+enum SystemRole {
+	USER
+	ADMIN
+}
+
+model User {
+	id				String		@id @default(uuid())
+	email			String		@unique
+	name			String
+	passwordHash	String?		@map("password_hash")
+	realmOfOrigin	String?		@map("realm_of_origin")
+
+	createdAt		DateTime	@default(now())	@map("created_at")
+	updatedAt		DateTime	@updatedAt		@map("updated_at")
+	deletedAt		DateTime?	@map("deleted_at")
+	systemRole		SystemRole	@default(USER)	@map("system_role")
+	isBot			Boolean		@default(false)	@map("bot")
+
+
+	translationsAuthored	Translation[]	@relation("TranslationAuthor")
+	translationsApproved	Translation[]	@relation("TranslationApprover")
+
+	memberships		ProjectMember[]
+
+	@@map("users")
+}
