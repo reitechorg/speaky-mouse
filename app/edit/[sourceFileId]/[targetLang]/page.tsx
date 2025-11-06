@@ -7,10 +7,9 @@ export default async function EditStringPage({
 	params: Promise<{
 		sourceFileId: string;
 		targetLang: string;
-		localeStringId: string;
 	}>;
 }) {
-	const { sourceFileId, targetLang, localeStringId } = await params;
+	const { sourceFileId, targetLang } = await params;
 
 	const data = await db.sourceFile.findUnique({
 		where: {
