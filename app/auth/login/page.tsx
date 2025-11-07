@@ -1,5 +1,6 @@
-import { LoginButton } from '@/app/ui/LoginButton';
 import { Metadata } from 'next';
+import Image from 'next/image';
+import { LoginButton } from './LoginButton';
 
 export const metadata: Metadata = {
 	title: 'Login - Speaky mouse',
@@ -9,7 +10,15 @@ export const metadata: Metadata = {
 export default async function LoginPage() {
 	return (
 		<div className='flex flex-col gap-4'>
-			<h1 className='text-2xl'>Log in</h1>
+			<Image
+				src='/icon.webp'
+				alt='Speaky Mouse Logo'
+				width={64}
+				height={64}
+				className='mx-auto'
+				draggable={false}
+			/>
+			<h1 className='text-2xl text-center'>Log in</h1>
 			<form className='flex flex-col gap-2'>
 				<input
 					className='border border-neutral-500 rounded px-4 py-2 w-full'

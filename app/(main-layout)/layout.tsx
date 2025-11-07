@@ -1,6 +1,6 @@
 import { Header } from '../ui/Header';
 
-export default function MainLayout({
+export default async function MainLayout({
 	children,
 }: Readonly<{
 	children: React.ReactNode;

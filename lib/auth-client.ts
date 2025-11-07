@@ -5,3 +5,7 @@ export const authClient = createAuthClient({
 	plugins: [adminClient()],
 });
 export const { signIn, signOut, signUp } = authClient;
+
+export function getAuthLink() {
+	return `/auth/login?back=${encodeURIComponent(window.location.pathname)}`;
+}
