@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import { Header } from '../ui/Header';
 
 export default function LoginLayout({
 	children,
@@ -7,7 +7,8 @@ export default function LoginLayout({
 }>) {
 	return (
 		<div className='h-screen'>
-			<div className='flex gap-4 items-center p-4'>
+			<Header />
+			{/* <div className='flex gap-4 items-center p-4'>
 				<Image
 					src='/icon.webp'
 					alt='Speaky Mouse Logo'
@@ -23,7 +24,7 @@ export default function LoginLayout({
 						Let every language squeak!
 					</div>
 				</div>
-			</div>
+			</div> */}
 			<div className='flex justify-center items-center'>
 				<div className='p-4 bg-amber-50 text-background max-w-full w-100 rounded-xl'>
 					{children}

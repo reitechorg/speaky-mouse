@@ -1,3 +1,4 @@
+import { LoginButton } from '@/app/ui/LoginButton';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -5,7 +6,7 @@ export const metadata: Metadata = {
 	description: 'Login to your account',
 };
 
-export default function LoginPage() {
+export default async function LoginPage() {
 	return (
 		<div className='flex flex-col gap-4'>
 			<h1 className='text-2xl'>Log in</h1>
@@ -33,6 +34,7 @@ export default function LoginPage() {
 			<div className='text-sm text-center text-neutral-500'>
 				Or continue with
 			</div>
+			<LoginButton />
 		</div>
 	);
 }

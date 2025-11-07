@@ -1,21 +1,18 @@
-enum SystemRole {
-	BANNED
-	BOT
-	USER
-	ADMIN
-}
-
 model User {
-	id				String		@id @default(cuid())
-	email			String		@unique
-	name			String
-	passwordHash	String?		@map("password_hash")
-	realmOfOrigin	String?		@map("realm_of_origin")
+	id				      String		@id @default(cuid())
+	name			      String		@db.Text
+	email			      String
+	emailVerified 	Boolean 	@map("email_verified") @default(false)
+	image			      String?		@db.Text
+	createdAt		    DateTime	@map("created_at")	@default(now())
+	updatedAt		    DateTime	@map("updated_at")	@updatedAt
+	sessions		    Session[]
+	accounts		    Account[]
 
-	createdAt		DateTime	@default(now())	@map("created_at")
-	updatedAt		DateTime	@updatedAt		@map("updated_at")
-	deletedAt		DateTime?	@map("deleted_at")
-	systemRole		SystemRole	@default(USER)	@map("system_role")
+  role			 String?		@map("role")
+  banned     Boolean?
+  banReason  String?	@db.Text @map("ban_reason")
+  banExpires DateTime? @map("ban_expires_at")
 
 	translationsAuthored	Translation[]	@relation("TranslationAuthor")
 	translationsApproved	Translation[]	@relation("TranslationApprover")
@@ -23,4 +20,50 @@ model User {
 	memberships		ProjectMember[]
 
 	@@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime @map("expires_at")
+  token     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  ipAddress String?  @db.Text @map("ip_address")
+  userAgent String?  @db.Text @map("user_agent")
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy String? @map("impersonated_by")
+
+  @@unique([token])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id  @default(cuid())
+  accountId             String    @db.Text @map("account_id")
+  providerId            String    @db.Text @map("provider_id")
+  userId                String    @map("user_id")
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @db.Text @map("access_token")
+  refreshToken          String?   @db.Text @map("refresh_token")
+  idToken               String?   @db.Text @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope                 String?   @db.Text
+  password              String?   @db.Text
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String   @db.Text
+  value      String   @db.Text
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("verification")
 }

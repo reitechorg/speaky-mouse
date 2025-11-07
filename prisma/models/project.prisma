@@ -57,4 +57,5 @@ model ProjectMember {
 	user			User	@relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
 	@@id([projectId, userId])
+	@@map("project_members")
 }
