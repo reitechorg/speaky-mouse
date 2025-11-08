@@ -8,13 +8,13 @@ const socialProviders: SocialProvider<keyof SocialProviders>[] = [
 	standardSocialProvider('huggingface'),
 	standardSocialProvider('github'),
 	standardSocialProvider('kick'),
-	standardSocialProvider('kakao'),
+	standardSocialProvider('kakao', { iconUrl: '/login-providers/kakao.png' }),
 	standardSocialProvider('slack'),
 	standardSocialProvider('notion'),
 	standardSocialProvider('naver'),
 	standardSocialProvider('tiktok'),
 	standardSocialProvider('twitch'),
-	standardSocialProvider('twitter'),
+	standardSocialProvider('twitter', { title: 'Twitter / X' }),
 	standardSocialProvider('dropbox'),
 	standardSocialProvider('linear'),
 	standardSocialProvider('reddit'),
@@ -24,6 +24,7 @@ const socialProviders: SocialProvider<keyof SocialProviders>[] = [
 	standardSocialProvider('line'),
 	{
 		key: 'microsoft',
+		iconUrl: '/login-providers/microsoft.svg',
 		title: 'Microsoft',
 		enabled() {
 			const id = process.env.AUTH_MICROSOFT_ID;
@@ -53,6 +54,7 @@ const socialProviders: SocialProvider<keyof SocialProviders>[] = [
 	{
 		key: 'paypal',
 		title: 'PayPal',
+		iconUrl: '/login-providers/paypal.svg',
 		enabled() {
 			const id = process.env.AUTH_PAYPAL_ID;
 			const secret = process.env.AUTH_PAYPAL_SECRET;
@@ -75,6 +77,7 @@ const socialProviders: SocialProvider<keyof SocialProviders>[] = [
 	{
 		key: 'salesforce',
 		title: 'Salesforce',
+		iconUrl: '/login-providers/salesforce.svg',
 		enabled() {
 			const id = process.env.AUTH_SALESFORCE_ID;
 			const secret = process.env.AUTH_SALESFORCE_SECRET;
@@ -97,6 +100,7 @@ const socialProviders: SocialProvider<keyof SocialProviders>[] = [
 	{
 		key: 'gitlab',
 		title: 'GitLab',
+		iconUrl: '/login-providers/gitlab.svg',
 		enabled() {
 			const id = process.env.AUTH_GITLAB_ID;
 			const secret = process.env.AUTH_GITLAB_SECRET;
@@ -117,6 +121,8 @@ const socialProviders: SocialProvider<keyof SocialProviders>[] = [
 	{
 		key: 'cognito',
 		title: process.env.AUTH_COGNITO_TITLE || 'Cognito',
+		iconUrl:
+			process.env.AUTH_COGNITO_ICON_URL || '/login-providers/aws.svg',
 		enabled() {
 			return (
 				!!process.env.AUTH_COGNITO_ID &&
@@ -141,6 +147,7 @@ const socialProviders: SocialProvider<keyof SocialProviders>[] = [
 	{
 		key: 'figma',
 		title: 'Figma',
+		iconUrl: '/login-providers/figma.svg',
 		enabled() {
 			const id = process.env.AUTH_FIGMA_ID;
 			const secret = process.env.AUTH_FIGMA_SECRET;
@@ -160,6 +167,7 @@ const socialProviders: SocialProvider<keyof SocialProviders>[] = [
 	{
 		key: 'apple',
 		title: 'Apple ID',
+		iconUrl: '/login-providers/apple.svg',
 		enabled() {
 			const id = process.env.AUTH_APPLE_ID;
 			const secret = process.env.AUTH_APPLE_SECRET;
@@ -189,6 +197,10 @@ type SocialProvider<T extends keyof SocialProviders> = {
 
 function standardSocialProvider<T extends keyof SocialProviders>(
 	key: T,
+	options?: {
+		title?: string;
+		iconUrl?: string;
+	},
 ): SocialProvider<T> {
 	const envKey = `AUTH_${key.toUpperCase()}_ID`;
 	const envSecret = `AUTH_${key.toUpperCase()}_SECRET`;
@@ -197,9 +209,10 @@ function standardSocialProvider<T extends keyof SocialProviders>(
 
 	return {
 		key,
-		title: `${
-			key.charAt(0).toUpperCase() + key.substring(1).toLowerCase()
-		}`,
+		title:
+			options?.title ||
+			`${key.charAt(0).toUpperCase() + key.substring(1).toLowerCase()}`,
+		iconUrl: options?.iconUrl || `/login-providers/${key}.svg`,
 		enabled() {
 			return !!id && !!secret;
 		},
@@ -251,7 +264,9 @@ type SocialButtonConfig = {
 function buildSocialProviderConfig() {
 	const loginPageButtonConfig: SocialButtonConfig[] = [];
 	const config: SocialProviders = {};
-	for (const provider of socialProviders) {
+	for (const provider of socialProviders.sort((a, b) =>
+		a.title.localeCompare(b.title),
+	)) {
 		if (provider.enabled()) {
 			const providerHandler = provider.createProvider();
 			Object.assign(config, providerHandler);

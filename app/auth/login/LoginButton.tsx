@@ -4,7 +4,46 @@ import { signIn } from '@/lib/auth-client';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 
-export function LoginButton(prosps: {
+type ButtonTheme = {
+	wrapper: string;
+	text: string;
+	image: string;
+	list: string;
+};
+
+const styles: Record<string, ButtonTheme> = {
+	compact: {
+		wrapper:
+			'border-b border-neutral-400 last-of-type:border-b-0 px-4 py-2 w-full flex items-center justify-start gap-4 hover:bg-neutral-200 cursor-pointer',
+		text: '',
+		image: 'w-6 h-6 object-contain',
+		list: 'flex flex-col border border-neutral-400 rounded-md overflow-hidden',
+	},
+	button: {
+		wrapper:
+			'border border-neutral-400 px-2 py-2 w-full flex items-center justify-start gap-4 hover:bg-neutral-200 cursor-pointer rounded-md',
+		text: 'text-lg',
+		image: 'w-6 h-6 object-contain',
+		list: 'flex flex-col gap-2',
+	},
+	icon: {
+		wrapper:
+			'flex flex-col items-center gap-2 hover:bg-neutral-200 cursor-pointer p-2 rounded-md',
+		text: 'text-nowrap',
+		image: 'w-10 h-10 object-contain',
+		list: 'flex flex-row justify-around gap-0',
+	},
+};
+
+export function LoginButtonList(props: {
+	variant: 'button' | 'compact' | 'icon';
+	children: React.ReactNode;
+}) {
+	return <div className={styles[props.variant].list}>{props.children}</div>;
+}
+
+export function LoginButton(props: {
+	variant: 'button' | 'compact' | 'icon';
 	provider: string;
 	title: string;
 	iconUrl?: string;
@@ -12,23 +51,25 @@ export function LoginButton(prosps: {
 	const params = useSearchParams();
 	const callbackUrl = params.get('back');
 
+	function clickHandler() {
+		signIn.social({
+			provider: props.provider,
+			callbackURL: callbackUrl || window.location.href,
+		});
+	}
+
 	return (
 		<button
-			onClick={() => {
-				signIn.social({
-					provider: prosps.provider,
-					callbackURL: callbackUrl || window.location.href,
-				});
-			}}
-			className='border-b border-neutral-400 last-of-type:border-b-0 px-4 py-2 w-full flex items-center justify-start gap-2 hover:bg-neutral-200 cursor-pointer'>
+			onClick={clickHandler}
+			className={styles[props.variant].wrapper}>
 			<Image
-				src={prosps.iconUrl || '/login-providers/generic-link.png'}
-				alt={`${prosps.title} icon`}
+				src={props.iconUrl || '/login-providers/generic-link.png'}
+				alt={`${props.title} icon`}
 				width={20}
 				height={20}
-				className='w-4 h-4 object-contain'
+				className={styles[props.variant].image}
 			/>
-			{prosps.title}
+			<div className={styles[props.variant].text}>{props.title}</div>
 		</button>
 	);
 }

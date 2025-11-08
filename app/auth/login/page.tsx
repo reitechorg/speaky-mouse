@@ -1,15 +1,30 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
-import { LoginButton } from './LoginButton';
+import { LoginButton, LoginButtonList } from './LoginButton';
 import { authConfig } from '@/lib/auth-config';
+import { LoginForm } from './LoginForm';
 
 export const metadata: Metadata = {
 	title: 'Login - Speaky mouse',
 	description: 'Login to your account',
 };
 
+function decideLoginLayout(buttonCount: number, emailLoginEnabled: boolean) {
+	if (buttonCount < 3 + (emailLoginEnabled ? 0 : 3)) {
+		return 'button';
+	}
+	if (buttonCount < 6) {
+		return 'icon';
+	}
+	return 'compact';
+}
+
 export default async function LoginPage() {
 	const loginButtons = authConfig.loginButtons;
+	const layoutVariant = decideLoginLayout(
+		loginButtons.length,
+		authConfig.enableEmailLogin,
+	);
 	return (
 		<div className='flex flex-col gap-4'>
 			<Image
@@ -21,42 +36,25 @@ export default async function LoginPage() {
 				draggable={false}
 			/>
 			<h1 className='text-2xl text-center'>Log in</h1>
-			<form className='flex flex-col gap-2'>
-				<input
-					className='border border-neutral-500 rounded px-4 py-2 w-full'
-					type='email'
-					placeholder='E-mail'
-					name='email'
-					autoComplete='email'
-				/>
-				<input
-					className='border border-neutral-500 rounded px-4 py-2 w-full'
-					type='password'
-					placeholder='Password'
-					name='password'
-					autoComplete='current-password'
-				/>
-				<button
-					type='submit'
-					className='bg-highlight px-4 py-2 rounded cursor-pointer text-white font-bold hover:bg-[#4e9192]'>
-					Log in
-				</button>
-			</form>
-			{loginButtons.length > 0 && authConfig.enableEmailLogin && (
+			{authConfig.enableEmailLogin && <LoginForm />}
+			{loginButtons.length > 0 && (
 				<>
-					<div className='text-sm text-center text-neutral-500'>
-						Or continue with
-					</div>
-					<div className='flex flex-col border border-neutral-400 rounded-md overflow-hidden'>
+					{authConfig.enableEmailLogin && (
+						<div className='text-sm text-center text-neutral-500'>
+							Or continue with
+						</div>
+					)}
+					<LoginButtonList variant={layoutVariant}>
 						{loginButtons.map((button) => (
 							<LoginButton
+								variant={layoutVariant}
 								key={button.key}
 								provider={button.key}
 								title={button.title}
 								iconUrl={button.iconUrl}
 							/>
 						))}
-					</div>
+					</LoginButtonList>
 				</>
 			)}
 		</div>
