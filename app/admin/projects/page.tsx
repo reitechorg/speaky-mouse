@@ -2,8 +2,10 @@ import { db } from '@/lib/db';
 import Image from 'next/image';
 import Link from 'next/link';
 import { CreateNewProjectModal } from './CreateNewProjectModal';
+import { getExtracted } from 'next-intl/server';
 
 export default async function ManageUsersPage() {
+	const t = await getExtracted();
 	const projects = await db.project.findMany({
 		include: {
 			_count: {
@@ -22,10 +24,10 @@ export default async function ManageUsersPage() {
 			<div className='flex items-center justify-between'>
 				<div>
 					<h1 className='text-typo-primary font-semibold text-2xl'>
-						Project management
+						{t('Project management')}
 					</h1>
 					<p className='text-typo-secondary'>
-						Here you can manage all projects
+						{t('Here you can manage all projects')}
 					</p>
 				</div>
 				<div>
@@ -67,7 +69,7 @@ export default async function ManageUsersPage() {
 						<Link
 							href={`/${project.slug}`}
 							className='bg-white/10 hover:bg-white/15 text-center py-2 px-4 rounded-full'>
-							Open project
+							{t('Open project')}
 						</Link>
 					</div>
 				))}

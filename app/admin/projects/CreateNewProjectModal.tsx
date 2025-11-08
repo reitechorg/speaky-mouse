@@ -2,12 +2,13 @@
 
 import { Modal } from '@/app/ui/Modal';
 import { langCodes } from '@/lib/lang-codes';
-import { useActionState, useState } from 'react';
+import { useState } from 'react';
 import { createProject } from './create-project-action';
-import { useFormStatus } from 'react-dom';
+import { useExtracted } from 'next-intl';
 
 export function CreateNewProjectModal() {
 	const [isOpen, setIsOpen] = useState(false);
+	const t = useExtracted();
 
 	return (
 		<>
@@ -20,7 +21,7 @@ export function CreateNewProjectModal() {
 				<Modal>
 					<div className='flex justify-between items-center'>
 						<h2 className='text-xl font-semibold'>
-							Create New Project
+							{t('Create New Project')}
 						</h2>
 						<button
 							className='text-white/50 hover:text-white cursor-pointer'
@@ -33,7 +34,7 @@ export function CreateNewProjectModal() {
 						action={createProject}>
 						<label>
 							<div className='text-typo-secondary'>
-								Project title:
+								{t('Project title')}:
 							</div>
 							<input
 								placeholder='My awesome project'
@@ -44,7 +45,7 @@ export function CreateNewProjectModal() {
 						</label>
 						<label>
 							<div className='text-typo-secondary'>
-								Description:
+								{t('Description')}:
 							</div>
 							<textarea
 								placeholder='Lets build something great...'
@@ -54,7 +55,7 @@ export function CreateNewProjectModal() {
 						</label>
 						<label>
 							<div className='text-typo-secondary'>
-								Language to translate from:
+								{t('Language to translate from')}:
 							</div>
 							<select
 								name='sourceLanguage'
@@ -71,7 +72,7 @@ export function CreateNewProjectModal() {
 						<div className='flex justify-end'>
 							<button
 								className={`cursor-pointer bg-white/10 hover:bg-white/15 text-center py-2 px-6 rounded-full`}>
-								Create project
+								{t('Create project')}
 							</button>
 						</div>
 					</form>

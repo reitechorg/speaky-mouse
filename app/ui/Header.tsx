@@ -5,11 +5,9 @@ import { getUser } from '@/lib/auth';
 import Image from 'next/image';
 import { LogoutButton } from './LogoutButton';
 import { HeaderLoginSection } from './HeaderLoginSection';
-import { getTranslations } from '@/lib/lang';
 
 export async function Header() {
 	const session = await getUser();
-	const t = await getTranslations();
 
 	return (
 		<header className='flex justify-between items-center  p-4'>
@@ -23,10 +21,10 @@ export async function Header() {
 				/>
 				<div>
 					<div className='text-[#c8e6f1] font-semibold text-xl'>
-						{t['app.title']}
+						Speaky Mouse
 					</div>
 					<div className='text-accent text-sm'>
-						{t['app.description']}
+						Let every language squeak!
 					</div>
 				</div>
 			</div>

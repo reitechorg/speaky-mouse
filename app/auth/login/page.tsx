@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { LoginButton, LoginButtonList } from './LoginButton';
 import { authConfig } from '@/lib/auth-config';
 import { LoginForm } from './LoginForm';
+import { getExtracted } from 'next-intl/server';
 
 export const metadata: Metadata = {
 	title: 'Login - Speaky mouse',
@@ -20,6 +21,7 @@ function decideLoginLayout(buttonCount: number, emailLoginEnabled: boolean) {
 }
 
 export default async function LoginPage() {
+	const t = await getExtracted();
 	const loginButtons = authConfig.loginButtons;
 	const layoutVariant = decideLoginLayout(
 		loginButtons.length,
@@ -35,13 +37,13 @@ export default async function LoginPage() {
 				className='mx-auto'
 				draggable={false}
 			/>
-			<h1 className='text-2xl text-center'>Log in</h1>
+			<h1 className='text-2xl text-center'>{t('Log in')}</h1>
 			{authConfig.enableEmailLogin && <LoginForm />}
 			{loginButtons.length > 0 && (
 				<>
 					{authConfig.enableEmailLogin && (
 						<div className='text-sm text-center text-neutral-500'>
-							Or continue with
+							{t('or continue with')}
 						</div>
 					)}
 					<LoginButtonList variant={layoutVariant}>

@@ -1,7 +1,22 @@
 import type { NextConfig } from 'next';
+import createNextIntlPlugin from 'next-intl/plugin';
 
 const nextConfig: NextConfig = {
 	/* config options here */
 };
 
-export default nextConfig;
+const withNextIntl = createNextIntlPlugin({
+	experimental: {
+		messages: {
+			path: './i18n/lang',
+			format: 'json',
+			locales: 'infer',
+		},
+		extract: {
+			sourceLocale: 'en',
+		},
+		srcPath: './app',
+	},
+});
+const configWithIntl = withNextIntl(nextConfig);
+export default configWithIntl;

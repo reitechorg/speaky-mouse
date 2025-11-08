@@ -1,4 +1,5 @@
 onlyBuiltDependencies:
   - '@prisma/client'
+  - '@swc/core'
   - sharp
   - unrs-resolver

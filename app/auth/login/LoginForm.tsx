@@ -1,12 +1,14 @@
 'use client';
 
 import { authClient } from '@/lib/auth-client';
+import { useExtracted } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 export function LoginForm() {
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
+	const t = useExtracted();
 	const params = useSearchParams();
 	const callbackUrl = params.get('back');
 
@@ -46,7 +48,7 @@ export function LoginForm() {
 			<button
 				type='submit'
 				className='bg-highlight px-4 py-2 rounded cursor-pointer text-white font-bold hover:bg-[#4e9192]'>
-				Log in
+				{t('Log in')}
 			</button>
 		</form>
 	);

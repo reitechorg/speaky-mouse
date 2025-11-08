@@ -3,12 +3,14 @@ import { AdminNavLink } from './AdminNavLink';
 import { getUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { canRunSetup } from '../setup/page';
+import { getExtracted } from 'next-intl/server';
 
 export default async function AdminLayout({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
+	const t = await getExtracted();
 	const user = await getUser();
 	if (!user) {
 		const needSetup = await canRunSetup();
@@ -32,14 +34,20 @@ export default async function AdminLayout({
 						height={64}
 						className='m-4'
 					/>
-					<div className='font-semibold'>Speaky Mouse Admin</div>
+					<div className='font-semibold'>
+						{t('Speaky Mouse Admin')}
+					</div>
 				</div>
 				<div className='p-2 flex flex-col gap-1'>
 					<AdminNavLink href='/admin' exact>
-						Overview
+						{t('Overview')}
 					</AdminNavLink>
-					<AdminNavLink href='/admin/projects'>Projects</AdminNavLink>
-					<AdminNavLink href='/admin/users'>Users</AdminNavLink>
+					<AdminNavLink href='/admin/projects'>
+						{t('Projects')}
+					</AdminNavLink>
+					<AdminNavLink href='/admin/users'>
+						{t('Users')}
+					</AdminNavLink>
 				</div>
 			</div>
 			<div className='grow p-4'>{children}</div>

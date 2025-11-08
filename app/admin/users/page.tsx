@@ -1,14 +1,16 @@
+import { getExtracted } from 'next-intl/server';
 import { UsersTable } from './UserTable';
 
 export default async function ManageUsersPage() {
+	const t = await getExtracted();
 	return (
 		<div className='flex flex-col gap-4'>
 			<div>
 				<h1 className='text-typo-primary font-semibold text-2xl'>
-					User management
+					{t('User management')}
 				</h1>
 				<p className='text-typo-secondary'>
-					Here you can manage users (not implemented yet)
+					¨{t('Here you can manage users (not implemented yet)')}
 				</p>
 			</div>
 			<div>
