@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
 import { LoginButton } from './LoginButton';
+import { authConfig } from '@/lib/auth-config';
 
 export const metadata: Metadata = {
 	title: 'Login - Speaky mouse',
@@ -8,6 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function LoginPage() {
+	const loginButtons = authConfig.loginButtons;
 	return (
 		<div className='flex flex-col gap-4'>
 			<Image
@@ -40,10 +42,23 @@ export default async function LoginPage() {
 					Log in
 				</button>
 			</form>
-			<div className='text-sm text-center text-neutral-500'>
-				Or continue with
-			</div>
-			<LoginButton />
+			{loginButtons.length > 0 && authConfig.enableEmailLogin && (
+				<>
+					<div className='text-sm text-center text-neutral-500'>
+						Or continue with
+					</div>
+					<div className='flex flex-col border border-neutral-400 rounded-md overflow-hidden'>
+						{loginButtons.map((button) => (
+							<LoginButton
+								key={button.key}
+								provider={button.key}
+								title={button.title}
+								iconUrl={button.iconUrl}
+							/>
+						))}
+					</div>
+				</>
+			)}
 		</div>
 	);
 }

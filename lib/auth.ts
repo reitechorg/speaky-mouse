@@ -4,20 +4,16 @@ import { db } from './db';
 import { nextCookies } from 'better-auth/next-js';
 import { headers } from 'next/headers';
 import { admin } from 'better-auth/plugins';
+import { authConfig } from './auth-config';
 
 export const auth = betterAuth({
 	database: prismaAdapter(db, {
 		provider: 'mysql',
 	}),
 	emailAndPassword: {
-		enabled: true,
+		enabled: authConfig.enableEmailLogin,
 	},
-	socialProviders: {
-		github: {
-			clientId: process.env.AUTH_GITHUB_ID!,
-			clientSecret: process.env.AUTH_GITHUB_SECRET!,
-		},
-	},
+	socialProviders: authConfig.socialProviders,
 	plugins: [nextCookies(), admin()],
 });
 
