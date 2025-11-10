@@ -5,19 +5,21 @@ import { getUser } from '@/lib/auth';
 import Image from 'next/image';
 import { LogoutButton } from './LogoutButton';
 import { HeaderLoginSection } from './HeaderLoginSection';
+import Link from 'next/link';
 
 export async function Header() {
 	const session = await getUser();
 
 	return (
-		<header className='flex justify-between items-center  p-4'>
-			<div className='flex gap-4 items-center'>
+		<header className='flex justify-between items-center px-4 py-2 border-b border-black/10 bg-black/5'>
+			<Link href='/' className='flex gap-4 items-center'>
 				<Image
 					src='/icon.webp'
 					alt='Speaky Mouse Logo'
 					width={64}
 					height={64}
 					className='w-15 h-15 object-scale-down'
+					draggable={false}
 				/>
 				<div>
 					<div className='text-[#c8e6f1] font-semibold text-xl'>
@@ -27,7 +29,7 @@ export async function Header() {
 						Let every language squeak!
 					</div>
 				</div>
-			</div>
+			</Link>
 
 			<div className='flex gap-2 items-center'>
 				{!session?.user && <HeaderLoginSection />}

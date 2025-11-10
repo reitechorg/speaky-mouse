@@ -46,5 +46,5 @@ export async function createProject(formData: FormData) {
 		},
 	});
 
-	redirect(`/${project.slug}/settings`);
+	redirect(`/project/${project.slug}/settings`);
 }

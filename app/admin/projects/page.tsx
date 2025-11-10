@@ -67,7 +67,7 @@ export default async function ManageUsersPage() {
 							</div>
 						)}
 						<Link
-							href={`/${project.slug}`}
+							href={`/project/${project.slug}`}
 							className='bg-white/10 hover:bg-white/15 text-center py-2 px-4 rounded-full'>
 							{t('Open project')}
 						</Link>

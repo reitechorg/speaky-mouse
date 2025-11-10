@@ -8,7 +8,7 @@ export default async function MainLayout({
 	return (
 		<div>
 			<Header />
-			<div className='p-4'>{children}</div>
+			<div className='container mx-auto py-8'>{children}</div>
 		</div>
 	);
 }
