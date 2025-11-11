@@ -1,36 +1,11 @@
 import { NotFoundProject } from '@/app/ui/NotFoundPage';
+import { getUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { langCodes } from '@/lib/lang-codes';
 import Image from 'next/image';
 import Link from 'next/link';
-
-function TranslationProgressBar(props: {
-	translated: number;
-	approved: number;
-	total: number;
-}) {
-	const approvedPercent = (props.approved / (props.total || 1)) * 100;
-	const translatedPercent =
-		((props.translated - props.approved) / (props.total || 1)) * 100;
-
-	return (
-		<div
-			className='w-full h-3 bg-black/20 rounded-full flex overflow-hidden'
-			title={`${props.approved} approved, ${
-				props.translated - props.approved
-			} translated, ${
-				props.total - props.translated
-			} untranslated out of ${props.total} total strings`}>
-			<div
-				className='h-full bg-green-500'
-				style={{ width: `${approvedPercent}%` }}></div>
-			<div
-				title={``}
-				className='h-full bg-primary'
-				style={{ width: `${translatedPercent}%` }}></div>
-		</div>
-	);
-}
+import { TranslationProgressBar } from '../TranslationProgressBar';
+import { LanguageFlag } from '../LanguageFlag';
 
 export default async function ProjectPage({
 	params,
@@ -38,6 +13,8 @@ export default async function ProjectPage({
 	params: { projectSlug: string };
 }) {
 	const { projectSlug } = await params;
+	const user = await getUser();
+
 	const project = await db.project.findUnique({
 		where: { slug: projectSlug },
 		include: {
@@ -57,6 +34,11 @@ export default async function ProjectPage({
 					members: true,
 				},
 			},
+			members: {
+				where: {
+					userId: user?.user.id,
+				},
+			},
 		},
 	});
 
@@ -64,6 +46,14 @@ export default async function ProjectPage({
 		return <NotFoundProject />;
 	}
 
+	const isMember = project.members.some(
+		(member) => member.userId === user?.user.id,
+	);
+	const canViewProject = isMember || project.publicVisible;
+
+	if (!canViewProject) {
+		return <NotFoundProject />;
+	}
 	const sourceLanguagesSet = new Set<string>();
 	const targetLanguagesSet = new Set<string>();
 	project.sourceFiles.forEach((file) => {
@@ -182,9 +172,12 @@ export default async function ProjectPage({
 					<Link
 						href={`/project/${project.slug}/${locale.langCode}`}
 						key={locale.langCode}
-						className='flex items-center text-typo-secondary py-2 hover:bg-white/5 hover:text-typo-primary cursor-pointer px-4 gap-2'>
-						<div className='bg-linear-0 to-primary from-primary/60 rounded-md text-background font-bold uppercase text-sm w-8 text-center'>
+						className='flex items-center text-typo-secondary py-2 hover:bg-white/5 hover:text-typo-primary cursor-pointer px-4 gap-2 rounded-md'>
+						{/* <div className='bg-linear-0 to-primary from-primary/60 rounded-md text-background font-bold uppercase text-sm w-8 text-center'>
 							{locale.langCode}
+						</div> */}
+						<div className='w-6 h-6'>
+							<LanguageFlag languageCode={locale.langCode} />
 						</div>
 						<div className='font-semibold'>{locale.langName}</div>
 						<div className='ml-auto w-100 mr-4'>

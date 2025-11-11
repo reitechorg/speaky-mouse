@@ -4,6 +4,8 @@ import { getUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { canRunSetup } from '../setup/page';
 import { getExtracted } from 'next-intl/server';
+import { AdminLogoutButton } from './AdminLogoutButton';
+import Link from 'next/link';
 
 export default async function AdminLayout({
 	children,
@@ -48,6 +50,27 @@ export default async function AdminLayout({
 					<AdminNavLink href='/admin/users'>
 						{t('Users')}
 					</AdminNavLink>
+				</div>
+				<div className='mt-auto p-2'>
+					<div className='bg-white/10 rounded-xl flex p-2 gap-2 items-center'>
+						<img
+							src={user.user.image || '/logo.png'}
+							alt={user.user.name || 'User Avatar'}
+							className='rounded-md w-12 h-12 object-cover'
+							draggable={false}
+						/>
+						<div className='mr-auto'>
+							<Link
+								href={`/profile`}
+								className='font-semibold text-typo-primary hover:underline'>
+								{user.user.name}
+							</Link>
+							<div className='text-sm text-typo-secondary'>
+								{user.user.role}
+							</div>
+						</div>
+						<AdminLogoutButton />
+					</div>
 				</div>
 			</div>
 			<div className='grow p-4'>{children}</div>
