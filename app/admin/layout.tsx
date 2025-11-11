@@ -28,6 +28,27 @@ export default async function AdminLayout({
 	return (
 		<div className='min-h-screen bg-zinc-50 dark:bg-zinc-900 flex'>
 			<div className='w-64 border-r border-zinc-200 dark:border-zinc-700 grow-0 flex flex-col gap-6'>
+				<Link
+					href='/'
+					className='flex items-center gap-2 text-zinc-400 hover:text-zinc-200 hover:underline p-4 cursor-pointer text-sm'>
+					<div className='w-4 h-4 flex items-center justify-center'>
+						<svg
+							width='100%'
+							height='100%'
+							viewBox='0 0 24 24'
+							fill='none'
+							xmlns='http://www.w3.org/2000/svg'>
+							<path
+								d='M19 12H5M5 12L12 19M5 12L12 5'
+								stroke='currentColor'
+								strokeWidth='2'
+								strokeLinecap='round'
+								strokeLinejoin='round'
+							/>
+						</svg>
+					</div>
+					<div>{t('Back to the app')}</div>
+				</Link>
 				<div className='flex flex-col items-center'>
 					<Image
 						src='/icon.webp'
@@ -54,7 +75,7 @@ export default async function AdminLayout({
 				<div className='mt-auto p-2'>
 					<div className='bg-white/10 rounded-xl flex p-2 gap-2 items-center'>
 						<img
-							src={user.user.image || '/logo.png'}
+							src={user.user.image || '/icon-square.png'}
 							alt={user.user.name || 'User Avatar'}
 							className='rounded-md w-12 h-12 object-cover'
 							draggable={false}

@@ -53,6 +53,14 @@ export default async function ProjectPage({
 		return <NotFoundProject />;
 	}
 
+	const isMember = projectData.members.some(
+		(member) => member.userId === user?.user.id,
+	);
+	const canViewProject = isMember || projectData.publicVisible;
+	if (!canViewProject) {
+		return <NotFoundProject />;
+	}
+
 	return (
 		<div className='flex flex-col gap-2'>
 			<div className='flex items-center gap-4'>

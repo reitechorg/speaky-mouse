@@ -3,8 +3,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { CreateNewProjectModal } from './CreateNewProjectModal';
 import { getExtracted } from 'next-intl/server';
+import { Metadata } from 'next';
 
-export default async function ManageUsersPage() {
+export const metadata: Metadata = {
+	title: 'Project Management - Speaky mouse',
+};
+
+export default async function ManageProjectsPage() {
 	const t = await getExtracted();
 	const projects = await db.project.findMany({
 		include: {

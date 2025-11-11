@@ -1,5 +1,10 @@
 import { getExtracted } from 'next-intl/server';
 import { UsersTable } from './UserTable';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+	title: 'User Management - Speaky mouse',
+};
 
 export default async function ManageUsersPage() {
 	const t = await getExtracted();

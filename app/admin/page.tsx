@@ -1,4 +1,10 @@
+import { Metadata } from 'next';
 import { getExtracted } from 'next-intl/server';
+
+export const metadata: Metadata = {
+	title: 'Admin Dashboard - Speaky mouse',
+	description: 'Manage instance settings and projects',
+};
 
 export default async function AdminPage() {
 	const t = await getExtracted();
