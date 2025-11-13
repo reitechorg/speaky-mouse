@@ -66,6 +66,7 @@ type Project = {
 	members: ProjectMember[];
 };
 
+const selectedStringProperty = 'id';
 export function Editor(props: {
 	file: SourceFile;
 	language: string;
@@ -73,10 +74,10 @@ export function Editor(props: {
 }) {
 	const params = useSearchParams();
 	const activeLocaleStringId =
-		params.get('str') || props.file.localeStrings[0]?.id;
+		params.get(selectedStringProperty) || props.file.localeStrings[0]?.id;
 	const setActiveLocaleStringId = (id: string) => {
 		const url = new URL(window.location.href);
-		url.searchParams.set('str', id);
+		url.searchParams.set(selectedStringProperty, id);
 		window.history.replaceState({}, '', url.toString());
 	};
 
