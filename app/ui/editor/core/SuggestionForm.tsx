@@ -1,15 +1,42 @@
-export function SuggestionForm() {
+import { useExtracted } from 'next-intl';
+import { useState } from 'react';
+import { SuggestStringAction } from '../actions/suggest';
+
+export function SuggestionForm(props: {
+	maxLength?: number | null;
+	originalContent: string;
+	id: string;
+	language: string;
+}) {
+	const [content, setContent] = useState<string>('');
+	const t = useExtracted();
+
 	return (
-		<div className='flex flex-col gap-2'>
+		<form
+			className='flex flex-col gap-2'
+			action={SuggestStringAction}
+			onSubmit={() => setContent('')}>
 			<div className='text-typo-secondary text-sm uppercase font-semibold'>
-				Editor
+				{t('Editor')}
 			</div>
+			<input type='hidden' name='locale-string-id' value={props.id} />
+			<input type='hidden' name='language' value={props.language} />
 			<textarea
 				placeholder='Enter your translation here'
-				className='outline-0 field-sizing-content resize-none min-h-20'></textarea>
+				className='outline-0 field-sizing-content resize-none min-h-20'
+				value={content}
+				name='content'
+				onChange={(ev) => {
+					setContent(ev.target.value);
+				}}
+			/>
 			<div className='flex justify-between items-center'>
 				<div className='flex justify-start text-typo-secondary'>
-					<button className='hover:text-typo-primary cursor-pointer h-6 w-10'>
+					<button
+						type='button'
+						title={t('Use original string')}
+						onClick={() => setContent(props.originalContent)}
+						className='hover:text-typo-primary cursor-pointer h-6 w-10'>
 						<svg
 							width='100%'
 							height='100%'
@@ -25,7 +52,11 @@ export function SuggestionForm() {
 							/>
 						</svg>
 					</button>
-					<button className='hover:text-typo-primary cursor-pointer h-6 w-10'>
+					<button
+						type='button'
+						title={t('Clear text')}
+						onClick={() => setContent('')}
+						className='hover:text-typo-primary cursor-pointer h-6 w-10'>
 						<svg
 							width='100%'
 							height='100%'
@@ -41,7 +72,10 @@ export function SuggestionForm() {
 							/>
 						</svg>
 					</button>
-					<button className='hover:text-typo-primary cursor-pointer h-6 w-10'>
+					<button
+						type='button'
+						title={t('Grammar - OK')}
+						className='hover:text-typo-primary cursor-pointer h-6 w-10'>
 						<svg
 							width='100%'
 							height='100%'
@@ -60,13 +94,18 @@ export function SuggestionForm() {
 				</div>
 				<div className='flex items-center gap-4'>
 					<div className='flex items-center gap-2 bg-black/15 px-3 py-1 rounded-xl'>
-						0<span className='text-typo-secondary'>/ 255</span>
+						{content.length}
+						<span className='text-typo-secondary'>
+							/ {props.maxLength || props.originalContent.length}
+						</span>
 					</div>
-					<button className='bg-highlight text-background px-6 py-2 rounded-lg font-bold hover:bg-[#4e9192] cursor-pointer flex items-center gap-2'>
-						Suggest
+					<button
+						type='submit'
+						className='bg-highlight text-background px-6 py-2 rounded-lg font-bold hover:bg-[#4e9192] cursor-pointer flex items-center gap-2'>
+						{t('Suggest')}
 					</button>
 				</div>
 			</div>
-		</div>
+		</form>
 	);
 }

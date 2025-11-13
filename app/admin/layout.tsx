@@ -74,11 +74,14 @@ export default async function AdminLayout({
 				</div>
 				<div className='mt-auto p-2'>
 					<div className='bg-white/10 rounded-xl flex p-2 gap-2 items-center'>
-						<img
+						<Image
 							src={user.user.image || '/icon-square.png'}
 							alt={user.user.name || 'User Avatar'}
 							className='rounded-md w-12 h-12 object-cover'
 							draggable={false}
+							width={100}
+							height={100}
+							unoptimized
 						/>
 						<div className='mr-auto'>
 							<Link

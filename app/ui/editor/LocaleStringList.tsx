@@ -7,10 +7,10 @@ function StateIndicator(params: {
 		<div
 			className={`w-3 h-3 rounded-2xl ${
 				params.state === 'not-translated'
-					? 'bg-red-500'
+					? 'bg-zinc-500'
 					: params.state === 'translated'
 					? 'bg-green-500'
-					: 'bg-yellow-500'
+					: 'bg-primary'
 			}`}></div>
 	);
 }

@@ -1,46 +1,74 @@
+import Image from 'next/image';
+import { LocaleString } from '../Editor';
 import { SuggestionForm } from './SuggestionForm';
+import Link from 'next/link';
+import { useExtracted, useFormatter } from 'next-intl';
+import { ProjectRole } from '@/lib/generated/prisma/enums';
+import { ApproveTranslation, DeleteTranslations } from '../actions/suggest';
 
-export function EditorCore() {
+export function EditorCore(props: {
+	localeString: LocaleString;
+	language: string;
+	userId: string;
+	userRole: ProjectRole;
+	prevLocaleString?: () => void;
+	nextLocaleString?: () => void;
+}) {
+	const format = useFormatter();
+	const t = useExtracted();
 	return (
 		<div className='flex flex-col gap-6'>
 			<div className='flex flex-col gap-4'>
 				<div className='flex items-center w-full justify-between'>
 					<div className='text-typo-secondary text-sm uppercase font-semibold'>
-						Source string
+						{t('Source string')}
 					</div>
 					<div className='flex justify-end text-typo-secondary'>
-						<button className='hover:text-typo-primary cursor-pointer h-6 w-10'>
-							<svg
-								width='100%'
-								height='100%'
-								viewBox='0 0 24 24'
-								fill='none'
-								xmlns='http://www.w3.org/2000/svg'>
-								<path
-									d='M12 20V4M12 4L6 10M12 4L18 10'
-									stroke='currentColor'
-									strokeWidth='2'
-									strokeLinecap='round'
-									strokeLinejoin='round'
-								/>
-							</svg>
-						</button>
-						<button className='hover:text-typo-primary cursor-pointer h-6 w-10'>
-							<svg
-								width='100%'
-								height='100%'
-								viewBox='0 0 24 24'
-								fill='none'
-								xmlns='http://www.w3.org/2000/svg'>
-								<path
-									d='M12 5V19M12 19L19 12M12 19L5 12'
-									stroke='currentColor'
-									strokeWidth='2'
-									strokeLinecap='round'
-									strokeLinejoin='round'
-								/>
-							</svg>
-						</button>
+						{props.prevLocaleString && (
+							<button
+								title={t('Previous string')}
+								onClick={props.prevLocaleString}
+								className='hover:text-typo-primary cursor-pointer h-6 w-10'>
+								<svg
+									width='100%'
+									height='100%'
+									viewBox='0 0 24 24'
+									fill='none'
+									xmlns='http://www.w3.org/2000/svg'>
+									<path
+										d='M12 20V4M12 4L6 10M12 4L18 10'
+										stroke='currentColor'
+										strokeWidth='2'
+										strokeLinecap='round'
+										strokeLinejoin='round'
+									/>
+								</svg>
+							</button>
+						)}
+						{props.nextLocaleString && (
+							<button
+								title={t('Next string')}
+								onClick={props.nextLocaleString}
+								className='hover:text-typo-primary cursor-pointer h-6 w-10'>
+								<svg
+									width='100%'
+									height='100%'
+									viewBox='0 0 24 24'
+									fill='none'
+									xmlns='http://www.w3.org/2000/svg'>
+									<path
+										d='M12 5V19M12 19L19 12M12 19L5 12'
+										stroke='currentColor'
+										strokeWidth='2'
+										strokeLinecap='round'
+										strokeLinejoin='round'
+									/>
+								</svg>
+							</button>
+						)}
+						{!props.nextLocaleString && props.prevLocaleString && (
+							<div className='w-10 h-6' />
+						)}
 						<button className='hover:text-typo-primary cursor-pointer h-6 w-10'>
 							<svg
 								width='100%'
@@ -89,16 +117,149 @@ export function EditorCore() {
 						</button>
 					</div>
 				</div>
-				<div>Text lol</div>
+				<div>{props.localeString.content}</div>
 			</div>
 
-			<SuggestionForm />
+			<SuggestionForm
+				id={props.localeString.id}
+				maxLength={props.localeString.maxLength}
+				originalContent={props.localeString.content}
+				language={props.language}
+			/>
 
 			<div className='flex flex-col gap-2'>
-				<div className='text-typo-secondary text-sm uppercase font-semibold'>
-					Translations
+				<div className='text-typo-secondary text-sm uppercase font-semibold mb-2'>
+					{t('Translations')}
 				</div>
-				<div className='font-light'>No translations yet.</div>
+				{props.localeString.translations.length === 0 && (
+					<div className='font-light'>
+						{t('No translations yet.')}
+					</div>
+				)}
+				<div className='flex flex-col gap-4'>
+					{props.localeString.translations.map((translation) => (
+						<div
+							key={translation.id}
+							className='flex border-b border-typo-secondary/10 pb-4 last-of-type:border-b-0 items-start'>
+							<div className='flex flex-col gap-2'>
+								<div>{translation.content}</div>
+								<div className='flex items-center gap-1'>
+									<Image
+										src={
+											translation.author.image ||
+											'/icon-square.png'
+										}
+										alt={
+											translation.author.name ||
+											t('User Avatar')
+										}
+										className='w-6 h-6 rounded-full mr-2 object-cover'
+										draggable={false}
+										unoptimized
+										width={64}
+										height={64}
+									/>
+									<Link
+										href={`/users/${translation.author.id}`}
+										className='text-typo-secondary hover:text-typo-primary hover:underline'>
+										{translation.author.name}
+									</Link>
+									<div className='text-typo-secondary ml-2 mr-1 text-sm'>
+										{'•'}
+									</div>
+									<div className='text-typo-secondary text-sm'>
+										{format.dateTime(
+											new Date(translation.createdAt),
+										)}
+									</div>
+									{translation.approvedAt && (
+										<div className='text-green-400 text-sm flex items-center gap-1 ml-4'>
+											<svg
+												width='16'
+												height='16'
+												viewBox='0 0 24 24'
+												fill='none'
+												xmlns='http://www.w3.org/2000/svg'>
+												<path
+													d='M20 6L9 17L4 12'
+													stroke='currentColor'
+													strokeWidth='2'
+													strokeLinecap='round'
+													strokeLinejoin='round'
+												/>
+											</svg>
+											{t('Approved by')}{' '}
+											<Link
+												href={`/users/${translation.approver?.id}`}
+												className='underline hover:text-green-400/60'>
+												{translation.approver?.name}
+											</Link>
+										</div>
+									)}
+								</div>
+							</div>
+							<div className='flex gap-2 ml-auto'>
+								{props.userRole !== ProjectRole.TRANSLATOR &&
+									!translation.approvedAt && (
+										<form action={ApproveTranslation}>
+											<input
+												type='hidden'
+												name='translation-id'
+												value={translation.id}
+											/>
+											<button
+												title={t('Approve translation')}
+												className='w-6 h-6 text-typo-secondary hover:text-green-400 cursor-pointer'>
+												<svg
+													width='100%'
+													height='100%'
+													viewBox='0 0 24 24'
+													fill='none'
+													xmlns='http://www.w3.org/2000/svg'>
+													<path
+														d='M20 6L9 17L4 12'
+														stroke='currentColor'
+														strokeWidth='2'
+														strokeLinecap='round'
+														strokeLinejoin='round'
+													/>
+												</svg>
+											</button>
+										</form>
+									)}
+								{(props.userRole !== ProjectRole.TRANSLATOR ||
+									(props.userId === translation.authorId &&
+										!translation.approvedAt)) && (
+									<form action={DeleteTranslations}>
+										<input
+											type='hidden'
+											name='translation-id'
+											value={translation.id}
+										/>
+										<button
+											title={t('Delete translation')}
+											className='w-6 h-6 text-typo-secondary hover:text-red-400 cursor-pointer'>
+											<svg
+												width='100%'
+												height='100%'
+												viewBox='0 0 24 24'
+												fill='none'
+												xmlns='http://www.w3.org/2000/svg'>
+												<path
+													d='M16 6V5.2C16 4.0799 16 3.51984 15.782 3.09202C15.5903 2.71569 15.2843 2.40973 14.908 2.21799C14.4802 2 13.9201 2 12.8 2H11.2C10.0799 2 9.51984 2 9.09202 2.21799C8.71569 2.40973 8.40973 2.71569 8.21799 3.09202C8 3.51984 8 4.0799 8 5.2V6M10 11.5V16.5M14 11.5V16.5M3 6H21M19 6V17.2C19 18.8802 19 19.7202 18.673 20.362C18.3854 20.9265 17.9265 21.3854 17.362 21.673C16.7202 22 15.8802 22 14.2 22H9.8C8.11984 22 7.27976 22 6.63803 21.673C6.07354 21.3854 5.6146 20.9265 5.32698 20.362C5 19.7202 5 18.8802 5 17.2V6'
+													stroke='currentColor'
+													strokeWidth='2'
+													strokeLinecap='round'
+													strokeLinejoin='round'
+												/>
+											</svg>
+										</button>
+									</form>
+								)}
+							</div>
+						</div>
+					))}
+				</div>
 			</div>
 		</div>
 	);
