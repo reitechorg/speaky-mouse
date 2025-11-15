@@ -2,6 +2,8 @@ import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { canRunSetup } from '../setup/page';
 import { Metadata } from 'next';
+import { getUser } from '@/lib/auth';
+import { db } from '@/lib/db';
 
 export const metadata: Metadata = {
 	title: 'Speaky mouse - Open source translation tool',
@@ -13,62 +15,155 @@ export default async function Home() {
 		redirect('/setup');
 	}
 
+	const user = await getUser();
+	const projects = await db.project.findMany({
+		where: {
+			OR: [
+				{ publicVisible: true },
+				{
+					members: {
+						some: {
+							userId: user?.user.id,
+						},
+					},
+				},
+			],
+		},
+		include: {
+			members: {
+				where: {
+					userId: user?.user.id,
+				},
+			},
+			_count: {
+				select: {
+					members: true,
+				},
+			},
+		},
+		orderBy: {
+			members: {
+				_count: 'desc',
+			},
+		},
+	});
+
+	const userPojects = projects.filter((project) =>
+		project.members.some((member) => member.userId === user?.user.id),
+	);
+
+	const publicProjects = projects.filter((project) => project.publicVisible);
+
 	return (
-		<div className='flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black'>
-			<main className='flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start'>
-				<Image
-					className='dark:invert'
-					src='/next.svg'
-					alt='Next.js logo'
-					width={100}
-					height={20}
-					priority
-				/>
-				<div className='flex flex-col items-center gap-6 text-center sm:items-start sm:text-left'>
-					<h1 className='max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50'>
-						To get started, edit the page.tsx file.
-					</h1>
-					<p className='max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400'>
-						Looking for a starting point or more instructions? Head
-						over to{' '}
-						<a
-							href='https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app'
-							className='font-medium text-zinc-950 dark:text-zinc-50'>
-							Templates
-						</a>{' '}
-						or the{' '}
-						<a
-							href='https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app'
-							className='font-medium text-zinc-950 dark:text-zinc-50'>
-							Learning
-						</a>{' '}
-						center.
-					</p>
+		<div className='flex flex-col gap-8'>
+			<div>
+				<div className='text-3xl font-bold text-typo-primary'>
+					Welcome to Speaky Mouse
 				</div>
-				<div className='flex flex-col gap-4 text-base font-medium sm:flex-row'>
-					<a
-						className='flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]'
-						href='https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app'
-						target='_blank'
-						rel='noopener noreferrer'>
-						<Image
-							className='dark:invert'
-							src='/vercel.svg'
-							alt='Vercel logomark'
-							width={16}
-							height={16}
+				<div className='mt-4 text-typo-secondary'>
+					An open source translation tool to help you manage your
+					localization projects with ease.
+				</div>
+			</div>
+			{userPojects.length > 0 && (
+				<div className='border-t border-primary/10 pt-4'>
+					<div className='text-xl font-bold text-typo-primary'>
+						Your projects
+					</div>
+					<div className='grid grid-cols-5 gap-2 mt-4'>
+						{userPojects.map((project) => (
+							<ProjectCard
+								key={project.id}
+								title={project.title}
+								slug={project.slug}
+								sourceLang={project.defaultSourceLanguage}
+								description={project.description || undefined}
+								membersCount={project._count.members}
+								imageUrl={
+									project.imageUrl || '/icon-square.png'
+								}
+							/>
+						))}
+					</div>
+				</div>
+			)}
+			<div className='border-t border-primary/10 pt-4'>
+				<div className='text-xl font-bold text-typo-primary'>
+					Public projects{' '}
+					<span className='text-base text-typo-secondary font-normal'>
+						on this instance
+					</span>
+				</div>
+				<div className='grid grid-cols-5 gap-2 mt-4'>
+					{publicProjects.length === 0 && (
+						<div className='text-typo-secondary col-span-5'>
+							No public projects available.
+						</div>
+					)}
+					{publicProjects.map((project) => (
+						<ProjectCard
+							key={project.id}
+							title={project.title}
+							slug={project.slug}
+							sourceLang={project.defaultSourceLanguage}
+							description={project.description || undefined}
+							membersCount={project._count.members}
+							imageUrl={project.imageUrl || '/icon-square.png'}
 						/>
-						Deploy Now
-					</a>
-					<a
-						className='flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/8 px-5 transition-colors hover:border-transparent hover:bg-black/4 dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]'
-						href='https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app'
-						target='_blank'
-						rel='noopener noreferrer'>
-						Documentation
-					</a>
+					))}
 				</div>
-			</main>
+			</div>
+		</div>
+	);
+}
+
+function ProjectCard(props: {
+	title: string;
+	slug: string;
+	sourceLang?: string;
+	description?: string;
+	membersCount?: number;
+	imageUrl?: string;
+}) {
+	return (
+		<div className='p-4 flex flex-col border border-primary/10 rounded-2xl gap-4 bg-black/5'>
+			<div className='flex gap-4 items-center'>
+				{props.imageUrl && (
+					<Image
+						alt={props.title}
+						width={64}
+						height={64}
+						className='w-12 h-12 object-scale-down bg-white/10 rounded-lg'
+						src={props.imageUrl}
+						unoptimized
+					/>
+				)}
+				<div className='grow'>
+					<div className='flex items-center justify-between'>
+						<div className='font-semibold'>{props.title}</div>
+						{props.sourceLang && (
+							<div className='text-sm text-typo-secondary ml-auto'>
+								{props.sourceLang}
+							</div>
+						)}
+					</div>
+					{props.membersCount && (
+						<div className='text-sm text-typo-secondary'>
+							{props.membersCount} members
+						</div>
+					)}
+				</div>
+			</div>
+			{props.description && (
+				<div className='text-typo-secondary border-t border-primary/10 pt-2'>
+					{props.description}
+				</div>
+			)}
+			<a
+				className='bg-white/10 hover:bg-white/15 text-center py-2 px-4 rounded-full'
+				href={`/project/${props.slug}`}>
+				Open project
+			</a>
 		</div>
 	);
 }

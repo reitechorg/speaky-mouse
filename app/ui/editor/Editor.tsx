@@ -87,8 +87,6 @@ export function Editor(props: {
 	const activeLocaleString =
 		props.file.localeStrings[activeLocaleStringIndex] || null;
 
-	console.log('rerender Editor');
-
 	const prevLocaleString =
 		activeLocaleStringIndex > 0
 			? () => {
