@@ -1,3 +1,4 @@
+import { GenericOAuthConfig } from 'better-auth/plugins';
 import { SocialProviders } from 'better-auth/social-providers';
 
 const socialProviders: SocialProvider<keyof SocialProviders>[] = [
@@ -255,14 +256,15 @@ function envParseEnum<T>(
 	return defaultValue;
 }
 
-type SocialButtonConfig = {
+type ExternalLoginButtonConfig = {
+	type: 'social' | 'oauth';
 	key: string;
 	title: string;
 	iconUrl?: string;
 };
 
 function buildSocialProviderConfig() {
-	const loginPageButtonConfig: SocialButtonConfig[] = [];
+	const loginPageButtonConfig: ExternalLoginButtonConfig[] = [];
 	const config: SocialProviders = {};
 	for (const provider of socialProviders.sort((a, b) =>
 		a.title.localeCompare(b.title),
@@ -271,6 +273,7 @@ function buildSocialProviderConfig() {
 			const providerHandler = provider.createProvider();
 			Object.assign(config, providerHandler);
 			loginPageButtonConfig.push({
+				type: 'social',
 				key: provider.key,
 				title: provider.title,
 				iconUrl: provider.iconUrl,
@@ -283,15 +286,140 @@ function buildSocialProviderConfig() {
 	};
 }
 
+function buildCustomOAuthProviderConfig(): {
+	genericOAuthProviders: GenericOAuthConfig[];
+	loginButtons: ExternalLoginButtonConfig[];
+} {
+	const customProviderList = process.env.AUTH_CUSTOM_PROVIDERS;
+	if (!customProviderList) {
+		return {
+			genericOAuthProviders: [],
+			loginButtons: [],
+		};
+	}
+
+	const providerKeys = customProviderList.split(',').map((k) => k.trim());
+	const providers: GenericOAuthConfig[] = [];
+	const buttons: ExternalLoginButtonConfig[] = [];
+
+	for (const key of providerKeys) {
+		const { provider, button } = buildCustomOAuthProvider(key);
+		if (provider) {
+			providers.push(provider);
+		}
+		if (button) {
+			buttons.push(button);
+		}
+	}
+
+	return {
+		genericOAuthProviders: providers,
+		loginButtons: buttons,
+	};
+}
+
+function buildCustomOAuthProvider(key: string): {
+	provider: GenericOAuthConfig | null;
+	button: ExternalLoginButtonConfig | null;
+} {
+	const upperKey = key.toUpperCase();
+	const clientId = process.env[`AUTH_${upperKey}_ID`];
+	const clientSecret = process.env[`AUTH_${upperKey}_SECRET`];
+	const discoveryUrl = process.env[`AUTH_${upperKey}_DISCOVERY_URL`];
+
+	if (!clientId || !clientSecret) {
+		return {
+			provider: null,
+			button: null,
+		};
+	}
+
+	return {
+		provider: {
+			providerId: key,
+			clientId: clientId,
+			clientSecret: clientSecret,
+			discoveryUrl: discoveryUrl,
+			authorizationUrl: process.env[`AUTH_${upperKey}_AUTHORIZATION_URL`],
+			tokenUrl: process.env[`AUTH_${upperKey}_TOKEN_URL`],
+			userInfoUrl: process.env[`AUTH_${upperKey}_USERINFO_URL`],
+			scopes: process.env[`AUTH_${upperKey}_SCOPES`]
+				? process.env[`AUTH_${upperKey}_SCOPES`]!.split(',').map((s) =>
+						s.trim(),
+				  )
+				: undefined,
+			responseMode: envParseEnum(
+				'AUTH_' + upperKey + '_RESPONSE_MODE',
+				['query', 'form_post'],
+				'query',
+			),
+			redirectURI: process.env[`AUTH_${upperKey}_REDIRECT_URI`],
+			disableImplicitSignUp: envParseBool(
+				process.env[`AUTH_${upperKey}_DISABLE_IMPLICIT_SIGNUP`],
+				false,
+			),
+			accessType: process.env[`AUTH_${upperKey}_ACCESS_TYPE`],
+			prompt: envParseEnum(`AUTH_${upperKey}_PROMPT`, [
+				'none',
+				'login',
+				'consent',
+				'select_account',
+			]),
+			disableSignUp: envParseBool(
+				process.env[`AUTH_${upperKey}_DISABLE_SIGNUP`],
+				false,
+			),
+			responseType: process.env[`AUTH_${upperKey}_RESPONSE_TYPE`],
+			pkce: envParseBool(process.env[`AUTH_${upperKey}_PKCE`], false),
+			// Map profile fields from the OAuth provider to the user model
+			mapProfileToUser: (profile) => {
+				const mapping = <T>(field: string, defaultValue?: T) => {
+					const mapKey = `AUTH_${upperKey}_MAP_${field.toUpperCase()}`;
+					const mappedValue = profile[mapKey];
+					if (mappedValue !== undefined) {
+						return mappedValue as T;
+					}
+					return defaultValue;
+				};
+
+				return {
+					...profile,
+					name: mapping('name', profile.name),
+					email: mapping('email', profile.email),
+					emailVerified: !!mapping(
+						'EMAIL_VERIFIED',
+						profile.emailVerified,
+					),
+					image: mapping('image', profile.image),
+					role: mapping('role', 'user'),
+				};
+			},
+		},
+		button: {
+			type: 'oauth',
+			key: key,
+			title:
+				process.env[`AUTH_${upperKey}_TITLE`] ||
+				key.charAt(0).toUpperCase() + key.slice(1).toLowerCase(),
+			iconUrl: process.env[`AUTH_${upperKey}_ICON_URL`],
+		},
+	};
+}
+
 function buildAuthConfig() {
-	const config = buildSocialProviderConfig();
+	const socialConfig = buildSocialProviderConfig();
+	const genericOAuthProviders = buildCustomOAuthProviderConfig();
 	return {
 		enableEmailLogin: !envParseBool(
 			process.env.DISABLE_PASSWORD_LOGIN,
 			false,
 		),
-		socialProviders: config.providers,
-		loginButtons: config.buttons,
+		socialProviders: socialConfig.providers,
+		genericOAuthProviders: genericOAuthProviders.genericOAuthProviders,
+		loginButtons: [
+			...socialConfig.buttons,
+			...genericOAuthProviders.loginButtons,
+		],
 	};
 }
 

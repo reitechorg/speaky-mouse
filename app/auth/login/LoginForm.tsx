@@ -24,7 +24,7 @@ export function LoginForm() {
 				});
 			}}>
 			<input
-				className='border border-neutral-500 rounded px-4 py-2 w-full'
+				className='border border-neutral-500 rounded-2xl px-4 py-2 w-full'
 				type='email'
 				placeholder='E-mail'
 				name='email'
@@ -35,7 +35,7 @@ export function LoginForm() {
 				}}
 			/>
 			<input
-				className='border border-neutral-500 rounded px-4 py-2 w-full'
+				className='border border-neutral-500 rounded-2xl px-4 py-2 w-full'
 				type='password'
 				placeholder='Password'
 				name='password'
@@ -47,7 +47,7 @@ export function LoginForm() {
 			/>
 			<button
 				type='submit'
-				className='bg-highlight px-4 py-2 rounded cursor-pointer text-white font-bold hover:bg-[#4e9192]'>
+				className='bg-highlight px-4 py-2 rounded-2xl cursor-pointer text-white font-bold hover:bg-[#4e9192]'>
 				{t('Log in')}
 			</button>
 		</form>

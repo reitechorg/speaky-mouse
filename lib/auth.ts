@@ -3,7 +3,7 @@ import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { db } from './db';
 import { nextCookies } from 'better-auth/next-js';
 import { headers } from 'next/headers';
-import { admin } from 'better-auth/plugins';
+import { admin, genericOAuth } from 'better-auth/plugins';
 import { authConfig } from './auth-config';
 
 export const auth = betterAuth({
@@ -14,7 +14,13 @@ export const auth = betterAuth({
 		enabled: authConfig.enableEmailLogin,
 	},
 	socialProviders: authConfig.socialProviders,
-	plugins: [nextCookies(), admin()],
+	plugins: [
+		nextCookies(),
+		admin(),
+		genericOAuth({
+			config: authConfig.genericOAuthProviders,
+		}),
+	],
 	trustedOrigins: ['http://192.168.1.166:3000', 'http://localhost:3000'],
 });
 

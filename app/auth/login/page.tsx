@@ -54,6 +54,11 @@ export default async function LoginPage() {
 								provider={button.key}
 								title={button.title}
 								iconUrl={button.iconUrl}
+								type={button.type}
+								autoLogin={
+									loginButtons.length === 1 &&
+									!authConfig.enableEmailLogin
+								}
 							/>
 						))}
 					</LoginButtonList>
