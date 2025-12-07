@@ -234,8 +234,7 @@ function envParseBool(
 ): boolean {
 	if (value === undefined) return defaultValue;
 	const trueValues = ['1', 'true', 'yes', 'on'];
-	if (trueValues.includes(value.toLowerCase())) return true;
-	return false;
+	return trueValues.includes(value.toLowerCase());
 }
 
 function envParseEnum<T>(

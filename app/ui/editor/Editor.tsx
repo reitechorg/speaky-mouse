@@ -5,6 +5,8 @@ import { EditorHeader } from './EditorHeader';
 import { LocaleStringList } from './LocaleStringList';
 import { EditorCore } from './core/EditorCore';
 import { useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
+import { decodeTreeKey } from '@/lib/utils/key-encode';
 
 export type Translation = {
 	id: string;
@@ -110,6 +112,26 @@ export function Editor(props: {
 		(m) => m.userId === props.userId,
 	)!.role;
 
+	useEffect(() => {
+		const keydownHandler = (e: KeyboardEvent) => {
+			if (e.key === 'PageDown') {
+				if (nextLocaleString) {
+					nextLocaleString();
+				}
+			} else if (e.key === 'PageUp') {
+				if (prevLocaleString) {
+					prevLocaleString();
+				}
+			}
+		};
+
+		document.addEventListener('keydown', keydownHandler);
+
+		return () => {
+			document.removeEventListener('keydown', keydownHandler);
+		};
+	}, [nextLocaleString, prevLocaleString]);
+
 	return (
 		<div className='h-screen flex flex-col'>
 			<div className='grow-0 bg-white/10'>
@@ -121,7 +143,7 @@ export function Editor(props: {
 					fileLanguage={props.language}
 				/>
 			</div>
-			<div className='grid grid-cols-4 h-full grow'>
+			<div className='grid grid-cols-4 h-full grow overflow-hidden'>
 				<div className='col-span-1 bg-black/30 overflow-y-auto p-2 gap-1'>
 					<LocaleStringList
 						onSelect={setActiveLocaleStringId}
@@ -154,7 +176,33 @@ export function Editor(props: {
 					)}
 				</div>
 				<div className='col-span-1 bg-black/15'>
-					Details here including context
+					<div className='p-4 flex flex-col gap-2'>
+						<div className='flex gap-1 items-baseline'>
+							<div className='text-typo-primary rounded'>
+								Key:
+							</div>
+							<div className='text-typo-secondary'>
+								{decodeTreeKey(activeLocaleString.key).map(
+									(part, i) => (
+										<span key={part}>
+											{i > 0 && '.'}
+											{'"'}
+											{part}
+											{'"'}
+										</span>
+									),
+								)}
+							</div>
+						</div>
+						<div>
+							<div className='text-typo-primary'>
+								Description:
+							</div>
+							<div className='text-typo-secondary'>
+								{activeLocaleString.content}
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>

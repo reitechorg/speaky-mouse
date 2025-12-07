@@ -173,7 +173,7 @@ export function EditorCore(props: {
 										)}
 									</div>
 									{translation.approvedAt && (
-										<div className='text-green-400 text-sm flex items-center gap-1 ml-4'>
+										<div className='text-approved text-sm flex items-center gap-1 ml-4'>
 											<svg
 												width='16'
 												height='16'
@@ -191,7 +191,7 @@ export function EditorCore(props: {
 											{t('Approved by')}{' '}
 											<Link
 												href={`/users/${translation.approver?.id}`}
-												className='underline hover:text-green-400/60'>
+												className='underline hover:text-approved/60'>
 												{translation.approver?.name}
 											</Link>
 										</div>
@@ -209,7 +209,7 @@ export function EditorCore(props: {
 											/>
 											<button
 												title={t('Approve translation')}
-												className='w-6 h-6 text-typo-secondary hover:text-green-400 cursor-pointer'>
+												className='w-6 h-6 text-typo-secondary hover:text-approved cursor-pointer'>
 												<svg
 													width='100%'
 													height='100%'

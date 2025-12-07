@@ -15,7 +15,9 @@ export function SuggestionForm(props: {
 		<form
 			className='flex flex-col gap-2'
 			action={SuggestStringAction}
-			onSubmit={() => setContent('')}>
+			onSubmit={() => {
+				setContent('');
+			}}>
 			<div className='text-typo-secondary text-sm uppercase font-semibold'>
 				{t('Editor')}
 			</div>

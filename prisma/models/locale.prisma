@@ -50,7 +50,7 @@ model SourceFileTargetLanguage {
 model LocaleString {
 	id				String				@id @default(cuid())
 	key				String
-	content			String
+	content			String				@db.Text
 	maxLength		Int?				@map("max_length")
 	sourceFileId	String				@map("source_file_id")
 
@@ -59,13 +59,14 @@ model LocaleString {
 	translations	Translation[]
 
 	@@map("locale_strings")
+	@@unique([sourceFileId, key])
 }
 
 model Translation {
 	id				String				@id @default(cuid())
 	localeStringId	String				@map("locale_string_id")
 	language		String				@map("language_code") @db.Char(2)
-	content			String
+	content			String				@db.Text
 	authorId		String				@map("author_id")
 	createdAt		DateTime			@map("created_at") @default(now())
 	updatedAt		DateTime			@map("updated_at") @updatedAt

@@ -46,9 +46,10 @@ export default async function ProjectPage({
 		return <NotFoundProject />;
 	}
 
-	const isMember = project.members.some(
+	const membership = project.members.find(
 		(member) => member.userId === user?.user.id,
 	);
+	const isMember = !!membership;
 	const canViewProject = isMember || project.publicVisible;
 
 	if (!canViewProject) {
@@ -167,6 +168,25 @@ export default async function ProjectPage({
 				</div>
 			</div>
 			<p className='text-typo-secondary'>{project.description}</p>
+			{['ADMIN', 'OWNER'].includes(membership?.role || '') && (
+				<div className='flex gap-2 items-center pb-2'>
+					<Link
+						href={`/project/${projectSlug}`}
+						className='text-primary hover:underline'>
+						Translate
+					</Link>
+					<Link
+						href={`/project/${projectSlug}/files`}
+						className='text-primary hover:underline'>
+						Files
+					</Link>
+					<Link
+						href={`/project/${projectSlug}/settings`}
+						className='text-primary hover:underline'>
+						Settings
+					</Link>
+				</div>
+			)}
 			<div className='border-t border-primary/10 py-4 flex flex-col'>
 				{targetLocaleDetailed.map((locale) => (
 					<Link
@@ -188,7 +208,7 @@ export default async function ProjectPage({
 							/>
 						</div>
 						<div className='flex items-center gap-4 rounded-md bg-black/20 py-1 text-center justify-center'>
-							<div className='text-green-500 w-12 text-right'>
+							<div className='text-approved w-12 text-right'>
 								{Math.round(
 									(locale.approvedCount /
 										(locale.stringCount || 1)) *
@@ -196,7 +216,7 @@ export default async function ProjectPage({
 								)}
 								%
 							</div>
-							<div className='text-primary w-12 text-left'>
+							<div className='text-suggested w-12 text-left'>
 								{Math.round(
 									(locale.translatedCount /
 										(locale.stringCount || 1)) *

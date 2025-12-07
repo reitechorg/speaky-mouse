@@ -1,4 +1,4 @@
-import { SourceFile } from "./generated/prisma/client";
+import { SourceFile } from './generated/prisma/client';
 
 export type FileHandler = {
 	title: string;

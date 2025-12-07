@@ -4,31 +4,55 @@ import { getUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { langCodes } from '@/lib/lang-codes';
 import { slugify } from '@/lib/utils/slug';
-import { redirect } from 'next/navigation';
 
-export async function createProject(formData: FormData) {
+type CreateProjectResult = {
+	error: string | null;
+	project?: {
+		id: string;
+		slug: string;
+	};
+};
+
+export async function createProject(
+	previousState: CreateProjectResult,
+	formData: FormData,
+): Promise<CreateProjectResult> {
 	const user = await getUser();
 	if (!user) {
-		return;
+		return {
+			error: 'NOT_LOGGED_IN',
+		};
 	}
 
 	const name = `${formData.get('name')}`.trim();
 	const description = `${formData.get('description')}`.trim();
 	const sourceLang = `${formData.get('sourceLanguage')}`.trim();
 
-	if (name.length < 1 || name.length > 100) {
-		return;
+	if (name.length < 1) {
+		return {
+			error: 'NAME_TOO_SHORT',
+		};
+	}
+
+	if (name.length > 100) {
+		return {
+			error: 'NAME_TOO_LONG',
+		};
 	}
 
 	if (description.length > 500) {
-		return;
+		return {
+			error: 'DESCRIPTION_TOO_LONG',
+		};
 	}
 
 	if (
 		sourceLang.length !== 2 ||
 		Object.keys(langCodes).some((code) => code === sourceLang) === false
 	) {
-		return;
+		return {
+			error: 'INVALID_SOURCE_LANGUAGE',
+		};
 	}
 
 	const project = await db.project.create({
@@ -46,5 +70,13 @@ export async function createProject(formData: FormData) {
 		},
 	});
 
-	redirect(`/project/${project.slug}/settings`);
+	return {
+		error: null,
+		project: {
+			id: project.id,
+			slug: project.slug,
+		},
+	};
+
+	// redirect(`/project/${project.slug}/settings`);
 }

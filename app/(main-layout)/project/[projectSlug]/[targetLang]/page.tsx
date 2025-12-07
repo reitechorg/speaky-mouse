@@ -63,7 +63,9 @@ export default async function ProjectPage({
 
 	return (
 		<div className='flex flex-col gap-2'>
-			<div className='flex items-center gap-4'>
+			<Link
+				href={`/project/${projectSlug}`}
+				className='flex items-center gap-4'>
 				{projectData.imageUrl && (
 					<Image
 						alt={projectData.title}
@@ -82,7 +84,7 @@ export default async function ProjectPage({
 						</span>
 					</h1>
 				</div>
-			</div>
+			</Link>
 			<div className='border-t border-primary/10 py-4 flex flex-col'>
 				{projectData.sourceFiles.map((sourceFile) => (
 					<Link
@@ -137,7 +139,7 @@ export default async function ProjectPage({
 							/>
 						</div>
 						<div className='flex items-center gap-4 rounded-md bg-black/20 py-1 text-center justify-center'>
-							<div className='text-green-500 w-12 text-right'>
+							<div className='text-approved w-12 text-right'>
 								{Math.round(
 									(sourceFile.localeStrings.filter(
 										(localeString) =>
@@ -153,7 +155,7 @@ export default async function ProjectPage({
 								)}
 								%
 							</div>
-							<div className='text-primary w-12 text-left'>
+							<div className='text-suggested w-12 text-left'>
 								{Math.round(
 									(sourceFile.localeStrings.filter(
 										(localeString) =>

@@ -5,12 +5,12 @@ function StateIndicator(params: {
 }) {
 	return (
 		<div
-			className={`w-3 h-3 rounded-2xl ${
+			className={`w-3 h-3 rounded-2xl shrink-0 ${
 				params.state === 'not-translated'
-					? 'bg-zinc-500'
+					? 'bg-not-translated'
 					: params.state === 'translated'
-					? 'bg-green-500'
-					: 'bg-primary'
+					? 'bg-approved'
+					: 'bg-suggested'
 			}`}></div>
 	);
 }
@@ -31,9 +31,9 @@ function LocaleStringListItem(params: LocaleStringParams) {
 			className={`w-full flex rounded-md cursor-pointer items-center overflow-y-hidden ${
 				params.isActive ? 'bg-white/15' : 'hover:bg-white/10'
 			}`}>
-			<div className='flex items-center gap-2 p-2'>
+			<div className='flex items-center gap-2 p-2 max-w-full'>
 				<StateIndicator state={params.state} />
-				<div>{params.text}</div>
+				<div className='truncate'>{params.text}</div>
 			</div>
 			{params.isActive && (
 				<div className='ml-auto text-xs bg-highlight h-10 w-1'></div>

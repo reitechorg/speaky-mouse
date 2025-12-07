@@ -16,11 +16,11 @@ export function TranslationProgressBar(props: {
 				props.total - props.translated
 			} untranslated out of ${props.total} total strings`}>
 			<div
-				className='h-full bg-green-500'
+				className='h-full bg-approved'
 				style={{ width: `${approvedPercent}%` }}></div>
 			<div
 				title={``}
-				className='h-full bg-primary'
+				className='h-full bg-suggested'
 				style={{ width: `${translatedPercent}%` }}></div>
 		</div>
 	);

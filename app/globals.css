@@ -8,6 +8,10 @@
 	--color-typo-primary: #f3f6f7;
 	--color-typo-secondary: #a0b0b5;
 	--color-highlight: #62b6b7;
+
+	--color-not-translated: #212a30;
+	--color-suggested: #215461;
+	--color-approved: #2a9d53;
 }
 
 body {
