@@ -29,6 +29,7 @@ model Project {
 
 	sourceFiles		SourceFile[]
 	members			ProjectMember[]
+	apiKeys			ProjectApiKey[]
 
 	@@map("projects")
 }
@@ -58,4 +59,23 @@ model ProjectMember {
 
 	@@id([projectId, userId])
 	@@map("project_members")
+}
+
+enum ProjectApiKeyAccess {
+	READ_ONLY
+	READ_WRITE
+}
+
+model ProjectApiKey {
+	id			String	@id @default(cuid())
+	projectId	String	@map("project_id")
+	key			String	@unique
+
+	access		ProjectApiKeyAccess	@map("access")
+
+	createdAt	DateTime	@default(now())	@map("created_at")
+	updatedAt	DateTime	@updatedAt		@map("updated_at")
+
+	project		Project	@relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+	@@map("project_api_keys")
 }
