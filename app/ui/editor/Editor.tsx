@@ -96,7 +96,7 @@ export function Editor(props: {
 						props.file.localeStrings[activeLocaleStringIndex - 1]
 							.id,
 					);
-			  }
+				}
 			: undefined;
 	const nextLocaleString =
 		activeLocaleStringIndex < props.file.localeStrings.length - 1
@@ -105,7 +105,7 @@ export function Editor(props: {
 						props.file.localeStrings[activeLocaleStringIndex + 1]
 							.id,
 					);
-			  }
+				}
 			: undefined;
 
 	const userRole = props.file.project.members.find(
@@ -155,10 +155,10 @@ export function Editor(props: {
 								localeString.translations.length === 0
 									? 'not-translated'
 									: localeString.translations.some(
-											(t) => t.approvedAt,
-									  )
-									? 'translated'
-									: 'in-review',
+												(t) => t.approvedAt,
+										  )
+										? 'translated'
+										: 'in-review',
 						}))}
 					/>
 				</div>
