@@ -10,7 +10,7 @@ export type FileHandler = {
 	) => Promise<OutputFile[]>;
 };
 
-type OutputFile = {
+export type OutputFile = {
 	content: string;
 	path: string;
 };
