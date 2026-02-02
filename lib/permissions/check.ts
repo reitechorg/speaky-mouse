@@ -34,9 +34,11 @@ function checkPermissionInternal<TResource extends Resource>(ctx: {
 	action: ResourceActions<TResource>;
 	data: ResourceDataType<TResource> | null;
 }): boolean {
-	const permission = (permissions as PermissionDefinitions)[ctx.role][
-		ctx.resource
-	]?.[ctx.action];
+	const rolePermissions = (permissions as PermissionDefinitions)[ctx.role];
+	const resourcePermissions = rolePermissions?.[ctx.resource];
+
+	// @ts-expect-error TS can't infer that ctx.resource is a key of resourcePermissions
+	const permission = resourcePermissions?.[ctx.action];
 
 	// If permission is undefined, fallback to parent role
 	if (permission === undefined) {
