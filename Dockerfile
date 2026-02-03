@@ -55,4 +55,3 @@ ENV PORT=3000
 # https://nextjs.org/docs/pages/api-reference/config/next-config-js/output
 ENV HOSTNAME="0.0.0.0"
 CMD ["sh", "docker-entrypoint.sh"]
-CMD ["node", "server.js"]
