@@ -5,8 +5,9 @@ import { EditorHeader } from './EditorHeader';
 import { LocaleStringList } from './LocaleStringList';
 import { EditorCore } from './core/EditorCore';
 import { useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { decodeTreeKey } from '@/lib/utils/key-encode';
+import { FilterOptions } from './Filter';
 
 export type Translation = {
 	id: string;
@@ -68,7 +69,63 @@ type Project = {
 	members: ProjectMember[];
 };
 
+const sorters = {
+	byKey: (a: LocaleString, b: LocaleString) => {
+		return a.key.localeCompare(b.key);
+	},
+	byContent: (a: LocaleString, b: LocaleString) => {
+		return a.content.localeCompare(b.content);
+	},
+	translateThread: (a: LocaleString, b: LocaleString) => {
+		const isTranslated = a.translations.length > 0;
+		const isTranslatedB = b.translations.length > 0;
+
+		if (isTranslated && !isTranslatedB) {
+			return 1;
+		}
+		if (!isTranslated && isTranslatedB) {
+			return -1;
+		}
+
+		const approvedA = a.translations.some((t) => t.approvedAt);
+		const approvedB = b.translations.some((t) => t.approvedAt);
+
+		if (approvedA && !approvedB) {
+			return 1;
+		}
+		if (!approvedA && approvedB) {
+			return -1;
+		}
+
+		return 0;
+	},
+	approveThread: (a: LocaleString, b: LocaleString) => {
+		const approvedA = a.translations.some((t) => t.approvedAt);
+		const approvedB = b.translations.some((t) => t.approvedAt);
+
+		if (!approvedA && approvedB) {
+			return -1;
+		}
+		if (approvedA && !approvedB) {
+			return 1;
+		}
+
+		const isTranslatedA = a.translations.length > 0;
+		const isTranslatedB = b.translations.length > 0;
+
+		if (isTranslatedA && !isTranslatedB) {
+			return -1;
+		}
+		if (!isTranslatedA && isTranslatedB) {
+			return 1;
+		}
+
+		return 0;
+	},
+};
+
 const selectedStringProperty = 'id';
+const defaultStringSorter: keyof typeof sorters = 'byContent';
 export function Editor(props: {
 	file: SourceFile;
 	language: string;
@@ -83,14 +140,19 @@ export function Editor(props: {
 		window.history.replaceState({}, '', url.toString());
 	};
 
+	const sortBy = params.get('sort') || defaultStringSorter;
+	const sorterName = (
+		Object.keys(sorters).includes(sortBy) ? sortBy : defaultStringSorter
+	) as keyof typeof sorters;
+
 	const activeLocaleStringIndex = props.file.localeStrings.findIndex(
 		(ls) => ls.id === activeLocaleStringId,
 	);
 	const activeLocaleString =
 		props.file.localeStrings[activeLocaleStringIndex] || null;
 
-	const prevLocaleString =
-		activeLocaleStringIndex > 0
+	const prevLocaleString = useMemo(() => {
+		return activeLocaleStringIndex > 0
 			? () => {
 					setActiveLocaleStringId(
 						props.file.localeStrings[activeLocaleStringIndex - 1]
@@ -98,8 +160,9 @@ export function Editor(props: {
 					);
 				}
 			: undefined;
-	const nextLocaleString =
-		activeLocaleStringIndex < props.file.localeStrings.length - 1
+	}, [activeLocaleStringIndex, props.file.localeStrings]);
+	const nextLocaleString = useMemo(() => {
+		return activeLocaleStringIndex < props.file.localeStrings.length - 1
 			? () => {
 					setActiveLocaleStringId(
 						props.file.localeStrings[activeLocaleStringIndex + 1]
@@ -107,6 +170,7 @@ export function Editor(props: {
 					);
 				}
 			: undefined;
+	}, [activeLocaleStringIndex, props.file.localeStrings]);
 
 	const userRole = props.file.project.members.find(
 		(m) => m.userId === props.userId,
@@ -145,21 +209,29 @@ export function Editor(props: {
 			</div>
 			<div className='grid grid-cols-4 h-full grow overflow-hidden'>
 				<div className='col-span-1 bg-black/30 overflow-y-auto p-2 gap-1'>
+					<FilterOptions
+						targetLanguages={props.file.targetLanguages.map(
+							(tl) => tl.language,
+						)}
+					/>
 					<LocaleStringList
 						onSelect={setActiveLocaleStringId}
-						list={props.file.localeStrings.map((localeString) => ({
-							id: localeString.id,
-							text: localeString.content,
-							isActive: localeString.id === activeLocaleStringId,
-							state:
-								localeString.translations.length === 0
-									? 'not-translated'
-									: localeString.translations.some(
-												(t) => t.approvedAt,
-										  )
-										? 'translated'
-										: 'in-review',
-						}))}
+						list={props.file.localeStrings
+							.sort(sorters[sorterName])
+							.map((localeString) => ({
+								id: localeString.id,
+								text: localeString.content,
+								isActive:
+									localeString.id === activeLocaleStringId,
+								state:
+									localeString.translations.length === 0
+										? 'not-translated'
+										: localeString.translations.some(
+													(t) => t.approvedAt,
+											  )
+											? 'translated'
+											: 'in-review',
+							}))}
 					/>
 				</div>
 				<div className='col-span-2 py-4 px-6'>

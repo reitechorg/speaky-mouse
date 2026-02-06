@@ -40,6 +40,10 @@ export async function POST(
 		return new Response('Unauthorized', { status: 401 });
 	}
 
+	if (validToken.access === 'READ_ONLY') {
+		return new Response('Forbidden: Read-only access', { status: 403 });
+	}
+
 	if (!data.parser) {
 		return new Response('Source file parser not defined', { status: 400 });
 	}
