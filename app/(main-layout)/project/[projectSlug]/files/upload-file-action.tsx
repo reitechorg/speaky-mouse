@@ -1,7 +1,8 @@
 import { getUser } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { FileParser, getFileHandler } from '@/lib/file-handlers/get-handler';
+import { getFileHandler } from '@/lib/file-handlers/get-handler';
 import { checkPermission } from '@/lib/permissions/check';
+import { FileParser } from '@/lib/schema/fileParserSchema';
 
 export async function uploadFileAction(formData: FormData) {
 	'use server';
