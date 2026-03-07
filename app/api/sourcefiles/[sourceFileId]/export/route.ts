@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
-import { FileParser, getFileHandler } from '@/lib/file-handlers/get-handler';
+import { getFileHandler } from '@/lib/file-handlers/get-handler';
+import { FileParser } from '@/lib/schema/fileParserSchema';
 import { NextRequest } from 'next/server';
 
 export async function GET(

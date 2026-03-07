@@ -1,12 +1,11 @@
+import { FileHandler } from '../file-handler';
+import { FileParser } from '../schema/fileParserSchema';
 import { jsonFileHandler } from './json';
 
-export type FileParser = 'json' | 'csv';
+const parsers: Record<FileParser, FileHandler> = {
+	[FileParser.Json]: jsonFileHandler,
+};
 
 export function getFileHandler(handler: FileParser) {
-	switch (handler) {
-		case 'json':
-			return jsonFileHandler;
-		default:
-			throw new Error(`Unsupported file handler: ${handler}`);
-	}
+	return parsers[handler];
 }
