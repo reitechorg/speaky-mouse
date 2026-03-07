@@ -1,12 +1,8 @@
 import { db } from '@/lib/db';
 import { sourceFileInputSchema } from '@/lib/schema/sourceFileSchema';
 import { NextRequest } from 'next/server';
-import { title } from 'process';
 
-export async function POST(
-	req: NextRequest,
-	ctx: RouteContext<'/api/sourcefiles'>,
-) {
+export async function POST(req: NextRequest) {
 	const headers = await req.headers;
 	const authHeader = headers.get('Authorization');
 
