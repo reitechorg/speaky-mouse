@@ -13,7 +13,7 @@ export function EditorHeader(props: {
 	return (
 		<div className='flex justify-between items-center px-4 py-2'>
 			<Link
-				href={`/project/${props.projectSlug}`}
+				href={`/project/${props.projectSlug}/${props.fileLanguage}`}
 				className='flex gap-4 items-center'>
 				<Image
 					src={props.projectImageUrl || '/icon.webp'}

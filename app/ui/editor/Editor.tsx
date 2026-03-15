@@ -5,7 +5,7 @@ import { EditorHeader } from './EditorHeader';
 import { LocaleStringList } from './LocaleStringList';
 import { EditorCore } from './core/EditorCore';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { decodeTreeKey } from '@/lib/utils/key-encode';
 import { FilterOptions } from './Filter';
 
@@ -124,6 +124,14 @@ const sorters = {
 	},
 };
 
+function getSortedIds<T extends { id: string }>(
+	list: T[],
+	sorter: (a: T, b: T) => number,
+) {
+	const sorted = list.sort(sorter);
+	return sorted.map(({ id }) => id);
+}
+
 const selectedStringProperty = 'id';
 const defaultStringSorter: keyof typeof sorters = 'byContent';
 export function Editor(props: {
@@ -140,6 +148,7 @@ export function Editor(props: {
 		window.history.replaceState({}, '', url.toString());
 	};
 
+	const [sortedIds, setSortedIds] = useState<string[]>([]);
 	const sortBy = params.get('sort') || defaultStringSorter;
 	const sorterName = (
 		Object.keys(sorters).includes(sortBy) ? sortBy : defaultStringSorter

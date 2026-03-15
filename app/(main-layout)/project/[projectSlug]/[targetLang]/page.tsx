@@ -171,7 +171,7 @@ export default async function ProjectPage({
 								%
 							</div>
 						</div>
-						<div className='text-typo-secondary'>
+						<div className='text-typo-secondary w-25 text-right'>
 							{sourceFile.localeStrings.length} strings
 						</div>
 					</Link>

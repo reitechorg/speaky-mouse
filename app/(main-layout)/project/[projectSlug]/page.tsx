@@ -225,9 +225,6 @@ export default async function ProjectPage({
 								%
 							</div>
 						</div>
-						<div className='text-typo-secondary'>
-							{locale.stringCount} strings
-						</div>
 					</Link>
 				))}
 			</div>

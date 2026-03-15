@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { FileHandler, OutputFile } from '../file-handler';
 import { decodeTreeKey, encodeTreeKey } from '../utils/key-encode';
+import { getFallbackTranslation } from '../utils/translation-fallback';
 import { getExportPath } from './get-export-path';
 
 function flattenJsonObject(
@@ -32,24 +33,6 @@ export const jsonFileHandler: FileHandler = {
 	export: async (sourceFile, languages) => {
 		const outputFiles: OutputFile[] = [];
 
-		const getFallbackTranslation = (key: string, original: string) => {
-			if (sourceFile.notTranslatedStringExportMode === 'EMPTY_STRING') {
-				return '';
-			}
-			if (sourceFile.notTranslatedStringExportMode === 'FAIL_EXPORT') {
-				throw new Error(
-					`Missing translation for source file ${sourceFile.id}`,
-				);
-			}
-			if (sourceFile.notTranslatedStringExportMode === 'KEEP_ORIGINAL') {
-				return original;
-			}
-			if (sourceFile.notTranslatedStringExportMode === 'SKIP_STRING') {
-				return undefined;
-			}
-			return key;
-		};
-
 		for (const language of languages || []) {
 			const localeString = await db.localeString.findMany({
 				where: {
@@ -78,6 +61,7 @@ export const jsonFileHandler: FileHandler = {
 					: getFallbackTranslation(
 							suggestion.key,
 							suggestion.content,
+							sourceFile.notTranslatedStringExportMode,
 						);
 				if (translationContent === undefined) {
 					continue;
