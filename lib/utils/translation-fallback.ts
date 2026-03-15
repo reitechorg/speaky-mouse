@@ -9,7 +9,7 @@ export const getFallbackTranslation = (
 		return '';
 	}
 	if (mode === 'FAIL_EXPORT') {
-		throw new Error(`Missing translation for source file ${sourceFile.id}`);
+		throw new Error(`Missing translation for ${key}`);
 	}
 	if (mode === 'KEEP_ORIGINAL') {
 		return original;
