@@ -51,6 +51,7 @@ export default async function ManageProjectsPage() {
 								src={project.imageUrl || '/icon.webp'}
 								alt='Project Icon'
 								className='w-12 h-12 object-scale-down bg-white/10 rounded-lg'
+								unoptimized
 							/>
 							<div className='grow'>
 								<div className='flex items-center justify-between'>

@@ -21,6 +21,7 @@ export function EditorHeader(props: {
 					width={64}
 					height={64}
 					className='w-10 h-10 object-scale-down'
+					unoptimized
 				/>
 				<div>
 					<div className='text-accent font-semibold'>

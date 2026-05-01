@@ -64,6 +64,7 @@ export default async function ProjectFilesPage({
 						height={512}
 						className='h-24 w-24 object-cover rounded-md bg-white/10'
 						src={project.imageUrl}
+						unoptimized
 					/>
 				)}
 				<div className='flex flex-col gap-2'>
@@ -97,7 +98,9 @@ export default async function ProjectFilesPage({
 					<div className='flex items-end'>
 						<CreateSourceFileModal
 							projectSlug={projectSlug}
-							defaultSourceLanguage={project.defaultSourceLanguage}
+							defaultSourceLanguage={
+								project.defaultSourceLanguage
+							}
 							defaultTargetLanguages={project.defaultTargetLanguages.map(
 								(l) => l.language,
 							)}
@@ -116,7 +119,9 @@ export default async function ProjectFilesPage({
 						<SourceFileCard
 							key={file.id}
 							file={file}
-							targetLanguages={file.targetLanguages.map((l) => l.language)}
+							targetLanguages={file.targetLanguages.map(
+								(l) => l.language,
+							)}
 							projectSlug={projectSlug}
 						/>
 					))}

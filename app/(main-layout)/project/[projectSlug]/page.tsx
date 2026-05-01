@@ -123,6 +123,7 @@ export default async function ProjectPage({
 						height={512}
 						className='h-24 w-24 object-cover rounded-md bg-white/10'
 						src={project.imageUrl}
+						unoptimized
 					/>
 				)}
 				<div className='flex flex-col gap-2'>
