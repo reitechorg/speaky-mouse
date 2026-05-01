@@ -1,3 +1,4 @@
+import { extractBearerToken, validateApiKeyAccess } from '@/lib/api/validate-token';
 import { db } from '@/lib/db';
 import { getFileHandler } from '@/lib/file-handlers/get-handler';
 import { FileParser } from '@/lib/schema/fileParserSchema';
@@ -7,15 +8,11 @@ export async function GET(
 	req: NextRequest,
 	ctx: RouteContext<'/api/sourcefiles/[sourceFileId]/export'>,
 ) {
-	const headers = await req.headers;
+	const tokenResult = extractBearerToken(req);
+	if (tokenResult instanceof Response) return tokenResult;
+	const { token } = tokenResult;
+
 	const { sourceFileId } = await ctx.params;
-	const authHeader = headers.get('Authorization');
-
-	if (!authHeader || !authHeader.startsWith('Bearer ')) {
-		return new Response('Unauthorized', { status: 401 });
-	}
-
-	const token = authHeader.substring(7);
 	const data = await db.sourceFile.findUnique({
 		where: {
 			id: sourceFileId,
@@ -31,18 +28,14 @@ export async function GET(
 	});
 
 	if (!data) {
-		return new Response('Source file not found', { status: 404 });
+		return Response.json({ error: 'Source file not found' }, { status: 404 });
 	}
 
-	const projectApiKeys = data.project.apiKeys || [];
-	const validToken = projectApiKeys.find((key) => key.key === token);
-
-	if (!validToken) {
-		return new Response('Unauthorized', { status: 401 });
-	}
+	const authResult = validateApiKeyAccess(data.project.apiKeys, token);
+	if (authResult instanceof Response) return authResult;
 
 	if (!data.parser) {
-		return new Response('Source file parser not defined', { status: 400 });
+		return Response.json({ error: 'Source file parser not defined' }, { status: 400 });
 	}
 
 	const parser = getFileHandler(data.parser as FileParser);

@@ -1,11 +1,13 @@
+'use server';
+
 import { getUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { getFileHandler } from '@/lib/file-handlers/get-handler';
 import { checkPermission } from '@/lib/permissions/check';
 import { FileParser } from '@/lib/schema/fileParserSchema';
+import { revalidatePath } from 'next/cache';
 
 export async function uploadFileAction(formData: FormData) {
-	'use server';
 
 	const user = await getUser();
 
@@ -48,5 +50,5 @@ export async function uploadFileAction(formData: FormData) {
 
 	await parser.import(sourceFile, fileContent);
 
-	// console.log('Uploaded file content:', fileContent);
+	revalidatePath(`/project/${sourceFile.project.slug}/files`);
 }

@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { FileHandler, OutputFile } from '../file-handler';
+import { FileHandler, ImportTranslationsResult, OutputFile } from '../file-handler';
 import { decodeTreeKey, encodeTreeKey } from '../utils/key-encode';
 import { getFallbackTranslation } from '../utils/translation-fallback';
 import { getExportPath } from './get-export-path';
@@ -25,6 +25,64 @@ function flattenJsonObject(
 	}
 
 	return entries;
+}
+
+async function importTranslationsFromPairs(
+	sourceFileId: string,
+	pairs: [string, string][],
+	{ language, conflictMode, autoApprove, userId }: import('../file-handler').ImportTranslationsOptions,
+): Promise<ImportTranslationsResult> {
+	let imported = 0, skipped = 0, notFound = 0;
+
+	await db.$transaction(async (tx) => {
+		for (const [key, value] of pairs) {
+			const localeString = await tx.localeString.findUnique({
+				where: { sourceFileId_key: { sourceFileId, key } },
+				include: { translations: { where: { language } } },
+			});
+
+			if (!localeString) {
+				notFound++;
+				continue;
+			}
+
+			const existing = localeString.translations[0];
+
+			if (existing) {
+				if (conflictMode === 'SKIP_EXISTING') {
+					skipped++;
+					continue;
+				}
+				if (conflictMode === 'SKIP_APPROVED' && existing.approvedAt !== null) {
+					skipped++;
+					continue;
+				}
+				await tx.translation.update({
+					where: { id: existing.id },
+					data: {
+						content: value,
+						authorId: userId,
+						approvedAt: autoApprove ? new Date() : existing.approvedAt,
+						approvedBy: autoApprove ? userId : existing.approvedBy,
+					},
+				});
+			} else {
+				await tx.translation.create({
+					data: {
+						language,
+						content: value,
+						localeStringId: localeString.id,
+						authorId: userId,
+						approvedAt: autoApprove ? new Date() : null,
+						approvedBy: autoApprove ? userId : null,
+					},
+				});
+			}
+			imported++;
+		}
+	});
+
+	return { imported, skipped, notFound };
 }
 
 export const jsonFileHandler: FileHandler = {
@@ -103,11 +161,19 @@ export const jsonFileHandler: FileHandler = {
 		return outputFiles;
 	},
 	import: async (sourceFile, fileContent) => {
-		const data = JSON.parse(fileContent);
+		let data: unknown;
+		try {
+			data = JSON.parse(fileContent);
+		} catch {
+			throw new Error('Invalid JSON: the uploaded file could not be parsed');
+		}
+		if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+			throw new Error('Invalid JSON: expected a top-level object');
+		}
 
 		await db.$transaction(async (tx) => {
 			const usedKeys = new Set<string>();
-			for (const [key, value] of flattenJsonObject(data)) {
+			for (const [key, value] of flattenJsonObject(data as Record<string, unknown>)) {
 				usedKeys.add(key);
 				await tx.localeString.upsert({
 					where: {
@@ -137,5 +203,18 @@ export const jsonFileHandler: FileHandler = {
 				},
 			});
 		});
+	},
+	importTranslations: async (sourceFile, fileContent, options) => {
+		let data: unknown;
+		try {
+			data = JSON.parse(fileContent);
+		} catch {
+			throw new Error('Invalid JSON: the uploaded file could not be parsed');
+		}
+		if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+			throw new Error('Invalid JSON: expected a top-level object');
+		}
+		const pairs = flattenJsonObject(data as Record<string, unknown>);
+		return importTranslationsFromPairs(sourceFile.id, pairs, options);
 	},
 };

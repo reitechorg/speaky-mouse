@@ -17,5 +17,5 @@ export const getFallbackTranslation = (
 	if (mode === 'SKIP_STRING') {
 		return undefined;
 	}
-	return key;
+	throw new Error(`Unknown NotTranslatedExportMode: ${mode}`);
 };

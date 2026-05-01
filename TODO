@@ -1,70 +1,199 @@
-QA Checks
+## QA Checks
 
-QA checks automatically highlight all potential translation mistakes before approval. Detected issues will appear in the proofreading mode.
+QA checks automatically highlight all potential translation mistakes before approval.
+Detected issues will appear in the proofreading mode.
 
-[ ] Enable QA checks
+[x] Enable QA checks
+
+The editor currently has no validation pass before a translation is approved. QA checks
+should run automatically when a translation is submitted or when a reviewer opens the
+proofreading view. Results should be stored per translation (or computed on-the-fly) and
+surfaced as warning badges in LocaleStringList and as an inline panel in EditorCore.
+
+Implementation plan:
+1. Define a `QaCheck` interface in `lib/qa/` — takes `{ source, translation, config }`,
+   returns `{ type, severity, message }[]`.
+2. Implement individual check modules (one file per check category below).
+3. Add a `runQaChecks(checks[], source, translation, config)` runner in `lib/qa/index.ts`.
+4. Call the runner inside `SuggestStringAction` (after saving) and store results in a
+   new `TranslationQaIssue` table (translationId, checkType, severity, message).
+5. Expose issues in EditorCore.tsx alongside each translation history entry.
+6. Add warning dot to StateIndicator in LocaleStringList when a string has open issues.
+7. Add a project-level config object (stored in Project or a new ProjectQaConfig table)
+   so admins can toggle individual checks.
 
 Check for:
-[ ] Empty translation
+[x] Empty translation
 
--   Source is empty but the translation is not.
--   Translation is empty but the source is not.
+- Source is empty but the translation is not.
+- Translation is empty but the source is not.
 
-[ ] Length issues
+Implementation: Simple null/whitespace comparison in `lib/qa/checks/empty.ts`. Run on
+every save. High severity.
 
--   Translation exceeds predefined length limits. (Limits can be set somewhere)
+[x] Length issues
 
-[ ] Tags nussnatcg
+- Translation exceeds predefined length limits. (Limits can be set somewhere)
 
--   Inconsistent tags in the source and translation.
--   ID attributes consistency
--   CDATA tag consistency
+Context: The `LocaleString` model already has a `maxLength` field. The editor shows a
+character counter in `SuggestionForm.tsx` but does not enforce or warn on the limit.
 
-[ ] Spaces missmatch
+Implementation: Read `maxLength` from the locale string record and emit a warning if
+`translation.length > maxLength`. Limit configuration UI belongs in the source file or
+per-string settings. Add `maxLength` input to the source file creation dialog once that
+exists.
 
--   Spaces around special symbols
--   Start end end spaces
--   Start and end new line characters
--   Multiple spaces in succession
--   Non-breaking spaces
+[x] Tags mismatch
 
-[ ] Variables missmatch
+- Inconsistent tags in the source and translation.
+- ID attributes consistency
+- CDATA tag consistency
 
-[ ] Punctuation issues
+Implementation: Parse both strings with a lightweight XML/HTML tag extractor in
+`lib/qa/checks/tags.ts`. Compare opening/closing tag sets and attribute presence.
+Detect `<![CDATA[...]]>` blocks separately.
 
--   Inconsistent punctuation in source and translation
--   Spacing before and after punctuation marks
+[x] Spaces mismatch
 
-[ ] Character case missmatch
+- Spaces around special symbols
+- Start and end spaces
+- Start and end new line characters
+- Multiple spaces in succession
+- Non-breaking spaces
 
--   Initial capital letter
--   Unexprected multiple capilalized characters in succession
+Implementation: Regex-based check in `lib/qa/checks/spaces.ts`. Compare leading/trailing
+whitespace between source and translation; scan for `\u00A0` (non-breaking space) and
+consecutive space runs.
 
-[ ] Special characters missmatch
+[x] Variables mismatch
 
--   Bracet consistency
--   Markup language entities
--   Quotes and quote escapes
+Context: Many projects use placeholder variables like `{name}`, `%s`, `{{count}}`, or
+`%(variable)s`. These must appear unchanged in the translation.
+
+Implementation: Extract all variable patterns from source using a configurable regex
+(project-level setting). Verify all found variables are present in the translation.
+Implement in `lib/qa/checks/variables.ts`.
+
+[x] Punctuation issues
+
+- Inconsistent punctuation in source and translation
+- Spacing before and after punctuation marks
+
+Implementation: Check whether terminal punctuation (`.`, `?`, `!`) matches between
+source and translation. Check for space-before punctuation (common French vs English
+difference). Make locale-aware (some rules differ by target language). Implement in
+`lib/qa/checks/punctuation.ts`.
+
+[x] Character case mismatch
+
+- Initial capital letter
+- Unexpected multiple capitalized characters in succession
+
+Implementation: Compare first character case. Scan for ALL_CAPS words exceeding a
+threshold. Implement in `lib/qa/checks/case.ts`.
+
+[x] Special characters mismatch
+
+- Bracket consistency
+- Markup language entities
+- Quotes and quote escapes
+
+Implementation: Count and compare bracket pairs `()`, `[]`, `{}`. Parse HTML entities
+(`&amp;`, `&lt;`, etc.) and verify they appear in both strings. Check quote pairing.
+Implement in `lib/qa/checks/special.ts`.
 
 [ ] Incorrect translation
 
--   Translation marked by project members as incorrect
+- Translation marked by project members as incorrect
+
+Context: Reviewers currently have no explicit "mark as incorrect" action — only
+Approve and Delete. A "flag as incorrect" button would set a status flag on the
+Translation record without deleting it, so the translator can see feedback.
+
+Implementation: Add `flagged` boolean (or `status: FLAGGED`) to the `Translation` model.
+Add a "Flag" button in EditorCore alongside the Approve button (visible to REVIEWER+).
+Show flagged translations with a warning badge. Include flagged status in QA issues.
 
 [ ] Spelling mistakes
 
--   Detected by integrated spell checker
+- Detected by integrated spell checker
 
-[ ] Number missmatch
+Context: The browser's built-in `spellcheck` attribute is already present on the
+textarea in SuggestionForm.tsx but there is no server-side or integrated checker.
+
+Implementation: Integrate a server-side spell checker (e.g. `nspell` npm package with
+language-specific dictionaries) as an optional QA check. Run asynchronously post-save.
+Alternatively, document relying on browser spell check and close this item.
+
+[x] Number mismatch
+
+Context: If the source contains numeric values (prices, counts, version numbers), the
+translation should typically include the same numbers.
+
+Implementation: Extract all numeric tokens from both strings using a regex. Warn if
+source numbers are absent from the translation. Implement in `lib/qa/checks/numbers.ts`.
 
 [ ] Outdated translation
 
+Context: When the source string changes after a translation already exists, that
+translation becomes outdated. The `LocaleString` model has an `updatedAt` field and
+translations have their own `createdAt` — compare timestamps.
+
+Implementation: In the QA runner, compare `localeString.updatedAt` with
+`translation.createdAt`. If the string was updated after the translation was created,
+emit an "outdated" warning. Optionally store `sourceHash` on the Translation record
+(hash of source content at translation time) for a more robust signal.
+
 ---
 
-Translation Memory
-Machine translation
-Pre-translate
+## Translation Memory / Machine Translation
 
-Export Path variables:
+[ ] Translation Memory - store and reuse previous translations
+
+Context: No TM system exists. Previously approved translations for the same source text
+are the natural seed. TM matches should appear as suggestions in EditorCore next to
+the current AI/manual suggestions.
+
+Implementation plan:
+1. Add a `TranslationMemory` table (projectId, sourceText, targetLang, translatedText,
+   createdAt, usageCount) — or query approved `Translation` records directly.
+2. On string selection in the editor, query for TM matches above a similarity threshold
+   (exact match first, then fuzzy via Levenshtein distance).
+3. Expose via `/api/projects/[id]/tm/lookup` endpoint.
+4. Render TM hits as clickable suggestions in `EditorCore.tsx` above the input.
+5. Add a "Use TM suggestion" action that populates the textarea.
+
+[ ] Machine translation integration (e.g. DeepL, Google Translate)
+
+Context: No MT integration exists. The suggest action in
+`app/ui/editor/actions/suggest.ts` is the right place to hook in external MT APIs.
+
+Implementation plan:
+1. Add optional env vars: `DEEPL_API_KEY`, `GOOGLE_TRANSLATE_API_KEY`.
+2. Create `lib/mt/` adapters (one per provider) implementing a common interface:
+   `translate(text, sourceLang, targetLang): Promise<string>`.
+3. Add a "Suggest MT translation" button in EditorCore that calls a new server action
+   `app/ui/editor/actions/mt-suggest.ts`.
+4. Display MT result as a pre-filled suggestion in the textarea (not auto-saved).
+5. Store MT provider attribution on the Translation record for audit purposes.
+
+[ ] Pre-translate - fill untranslated strings from TM or MT automatically
+
+Context: Useful for new target languages or after bulk source string updates.
+
+Implementation plan:
+1. Add a `POST /api/sourcefiles/[id]/pre-translate` endpoint.
+2. Accepts `{ targetLang, strategy: 'TM' | 'MT' | 'TM_THEN_MT' }` in request body.
+3. Iterates all untranslated LocaleStrings for the given target language.
+4. Fills from TM first (if strategy allows), then falls back to MT.
+5. Saves results as Translation records with `approved: false` and a `source` tag
+   indicating TM or MT origin.
+6. Expose a "Pre-translate" button in the files page (ADMIN+ only).
+
+---
+
+## Export Path Variables (for target path templates in speaky.yaml / UI)
+
 %language% Language name (e.g. Ukrainian)
 %two_letters_code% Language code ISO 639-1 (i.e. uk)
 %three_letters_code% Language code ISO 639-2/T (i.e. ukr)
@@ -77,3 +206,387 @@ Export Path variables:
 %file_name% File name without extension
 %file_extension% Original file extension
 %original_path% Use parent folders' names in your project to build the file path in the resulting archive
+
+---
+
+## Code Quality / Bug Fixes
+
+### Critical
+
+[x] Fix JSON import error handling — `JSON.parse()` in `lib/file-handlers/json.ts` is
+unprotected; throws cryptic error on invalid input. Wrap in try/catch and return
+user-friendly error message.
+
+[x] Add validation in translation suggest action — `app/ui/editor/actions/suggest.ts`
+had a TODO comment for validation that was never implemented. Added: - content is not empty / not too long (max 10 000 chars) - localeStringId and language presence checks
+
+[x] Fix hardcoded trusted origins in auth — `lib/auth.ts` hardcoded
+`['http://192.168.1.166:3000', 'http://localhost:3000']`. Now driven by
+`AUTH_TRUSTED_ORIGINS` env var (comma-separated); defaults to localhost.
+
+[x] Fix file upload accept attribute — `app/(main-layout)/project/[projectSlug]/files/page.tsx`
+hardcoded `accept='application/json'`. Now uses `.csv,text/csv` for UnityCsv files
+and `.json,application/json` for JSON files.
+
+### Refactoring
+
+[x] Extract API token auth into shared helper — Created `lib/api/validate-token.ts` with
+`extractBearerToken()` and `validateApiKeyAccess()`. All four sourcefiles API routes
+now use these helpers instead of duplicating the logic.
+
+[x] Consistent API error responses — All API routes now return `Response.json({ error })`.
+Previously several routes returned plain-text strings.
+
+[x] Slug collision detection — `app/admin/projects/create-project-action.ts` now queries
+for existing slugs with the same prefix and appends -2, -3, ... if the base slug is taken.
+
+[x] Translation fallback unknown mode should throw — `lib/utils/translation-fallback.ts`
+now throws on unknown export mode instead of silently returning the key.
+
+[ ] Rewrite actions to have loading states and better error handling using "useActionState"
+pattern. Currently most actions are fire-and-forget with no user feedback on loading or errors.
+
+Context: `useActionState` (React 19) is already used in `CreateNewProjectModal.tsx` via
+`create-project-action.ts` — that is the reference implementation. The editor actions
+(`app/ui/editor/actions/suggest.ts`, `deleteTranslations`, `approveTranslation`) and the
+file upload action (`upload-file-action.tsx`) do not return state and give the user no
+feedback on failure or while pending.
+
+Implementation plan:
+1. Change each server action signature to
+   `(prevState: ActionState, formData: FormData) => Promise<ActionState>` where
+   `ActionState = { error: string | null, success?: boolean }`.
+2. In the corresponding client component, replace `action={myAction}` with
+   `const [state, formAction, pending] = useActionState(myAction, { error: null })`.
+3. Disable submit buttons while `pending` is true (add a spinner or dim the button).
+4. Render `state.error` as an inline error message below the form.
+5. Priority order: SuggestionForm (most-used), file upload action, approve/delete
+   buttons in EditorCore.
+
+---
+
+## Missing UI Pages / Features
+
+[x] Project settings page — `/project/[projectSlug]/settings` is linked from multiple
+places but doesn't exist. Should allow editing project name, description, image,
+source language, public join/download flags, and managing members.
+
+Implemented: `app/(main-layout)/project/[projectSlug]/settings/page.tsx` with:
+- General settings form (title, description, imageUrl) via `updateProjectAction`
+- Visibility toggles (publicVisible, publicJoin, publicDownload)
+- Languages section (source language selector, default target languages multi-select)
+- Members section (role change, remove, invite by email) — shown to ADMIN/MODERATOR+
+- Danger zone with delete project + confirmation — shown to OWNER only
+All forms use `useActionState` pattern.
+
+[x] User management admin page — `app/admin/users/page.tsx` shows a placeholder message
+"not implemented yet". Need edit/role-change/delete per user, and the
+`/admin/users/[id]` page that the "Edit" links point to.
+
+Implemented: Created `app/admin/users/[id]/page.tsx` with user profile, role change
+form (user ↔ admin), ban/unban form with optional reason and expiry, linked OAuth
+accounts list, and project memberships list. Server actions use `useActionState`.
+The existing UserTable already has "Edit" links pointing to `/admin/users/[id]`.
+
+Not done: search/filter in the users table (UserTable already lists all users via
+authClient.admin.listUsers; filtering can be added client-side later).
+
+[x] Admin dashboard — `app/admin/page.tsx` shows a stub. Should show platform-wide
+stats: total projects, users, translated strings, recent activity.
+
+Implemented: Four stat cards (projects, users, source strings, approved translations),
+a recent approvals feed (last 10 with author, project, key, timestamp), and a top-5
+projects table by source file count. All data fetched server-side.
+
+[x] Project member management UI — No UI to invite members, change roles, or remove
+members from a project. Only accessible via DB.
+
+Implemented as part of the project settings page (see above). Members section in
+`app/(main-layout)/project/[projectSlug]/settings/MembersSection.tsx` with inline
+role change, remove button, and invite-by-email form. Server actions in
+`settings-actions.ts`: `updateMemberRoleAction`, `removeMemberAction`, `addMemberAction`.
+OWNER role is protected from role change or removal.
+
+[x] Source file creation UI — "Add new source file" button exists in files page but has
+no handler. Should open a dialog to pick file, parser type, source language, and
+target languages.
+
+Implemented: `CreateSourceFileModal.tsx` with title, parser selector (Json/UnityCsv),
+source language, target languages multi-select, and optional initial file upload.
+`createSourceFileAction.ts` creates the SourceFile record, runs the import handler if
+a file is attached, and revalidates the files page. Button in `files/page.tsx` wired
+to open the modal. Uses `useActionState` for pending/error feedback.
+
+[ ] Labels / tags management — `Labels` model exists in the DB schema but there is no
+UI or API to create, assign, or filter by labels.
+
+Context: `Labels` (in `prisma/models/locale.prisma`) has `id`, `projectId`, `name`,
+`color`, and a many-to-many relation to `LocaleString`. The editor filter panel
+(`app/ui/editor/Filter.tsx`) only supports sort order — labels could be a natural
+filter there. Labels are project-scoped.
+
+Implementation plan:
+1. API endpoints (can be REST or server actions):
+   - `GET /api/projects/[id]/labels` — list labels for a project.
+   - `POST /api/projects/[id]/labels` — create a label `{ name, color }`.
+   - `DELETE /api/projects/[id]/labels/[labelId]` — delete label.
+   - `POST /api/localestrings/[id]/labels` — assign label to string.
+   - `DELETE /api/localestrings/[id]/labels/[labelId]` — remove label from string.
+2. Labels management UI in project settings: color picker + name input, delete button
+   per label, display as color chips.
+3. Label assignment in EditorCore: a multi-select chip input in the metadata sidebar.
+4. Filter by label in `Filter.tsx` and `LocaleStringList.tsx` — add label filter to
+   URL search params so it persists on reload.
+
+---
+
+## Missing API Endpoints
+
+[x] `GET /api/sourcefiles/[sourceFileId]` — Get a single source file's metadata.
+
+[x] `DELETE /api/sourcefiles/[sourceFileId]` — Delete a source file and its strings/translations.
+
+[x] `GET /api/projects` — Returns the project associated with the bearer token (array for REST consistency).
+
+[ ] Project management API — `POST /api/projects`, `PATCH /api/projects/[id]`,
+`DELETE /api/projects/[id]` so projects can be managed without the admin UI.
+
+Context: Currently projects can only be created from the admin UI. The CLI has no way
+to create or modify a project programmatically. The existing `create-project-action.ts`
+server action contains the creation logic that can be ported to an API route. Token
+auth (READ_WRITE) should gate all write operations.
+
+Implementation plan:
+1. `POST /api/projects` — create project; body mirrors the admin creation form
+   (title, description, sourceLanguage, targetLanguages). Requires READ_WRITE token.
+   Returns created project with slug.
+2. `PATCH /api/projects/[id]` — update title, description, imageUrl, visibility flags.
+   Token must belong to the target project. Returns updated project.
+3. `DELETE /api/projects/[id]` — delete project and cascade (members, source files,
+   strings, translations). Requires READ_WRITE token belonging to that project.
+   Return 204 No Content.
+4. Follow the existing route pattern in `app/api/sourcefiles/route.ts` for consistent
+   token validation using `lib/api/validate-token.ts`.
+
+[ ] Members API — Endpoints to list, add, update role, and remove project members.
+
+Context: Member management is currently entirely manual (direct DB). External tooling
+(scripts, CI) may need to automate onboarding. Token must belong to the project;
+only READ_WRITE tokens with OWNER/ADMIN project role should be able to write.
+
+Implementation plan:
+1. `GET /api/projects/[id]/members` — list members with userId, name, email, role.
+2. `POST /api/projects/[id]/members` — add member `{ userId, role }`. Returns created
+   member record.
+3. `PATCH /api/projects/[id]/members/[userId]` — update role.
+4. `DELETE /api/projects/[id]/members/[userId]` — remove member.
+5. All routes in `app/api/projects/[projectId]/members/` and
+   `app/api/projects/[projectId]/members/[userId]/`.
+6. Reuse `validateApiKeyAccess` from `lib/api/validate-token.ts`, then additionally
+   check the API key owner's project role before allowing writes.
+
+---
+
+## File Format Support
+
+Context: File handlers implement the `FileHandler` interface from `lib/file-handler.ts`
+and are registered in `lib/file-handlers/get-handler.ts`. Adding a new format requires
+only those two files plus a new handler file — no schema changes needed. The parser type
+is stored as a string in the `SourceFile.parser` column.
+
+General implementation steps for each format:
+1. Create `lib/file-handlers/<format>.ts` implementing `FileHandler`.
+2. Implement `parse(content): ParsedFile` — returns `{ strings: Record<string, string> }`.
+3. Implement `serialize(strings, options): string` — converts back to the format.
+4. Register the handler in `get-handler.ts`.
+5. Add the new parser option to the source file creation UI / `speaky.yaml` docs.
+
+[ ] XLIFF (.xlf / .xliff) — Industry standard; used by many CAT tools.
+
+Context: XLIFF 1.2 and 2.0 are XML-based formats widely used by translation agencies
+and tools (memoQ, SDL Trados, Phrase). Supporting XLIFF would allow round-tripping with
+professional CAT tools.
+
+Format notes: parse `<trans-unit>` elements (1.2) or `<unit>` elements (2.0); use `id`
+attribute as key; `<source>` as source text; `<target>` as translation.
+Recommended library: `xliff` npm package.
+
+[ ] GNU Gettext (.po / .pot)
+
+Context: The dominant format for Linux/open-source software. `.pot` files are templates
+(source only); `.po` files contain translations. Supports plural forms via `msgid_plural`
+/ `msgstr[n]` — plural handling may require schema additions.
+
+Format notes: keys are `msgid` strings; translations are `msgstr`. Use `gettext-parser`
+npm package for reliable parsing.
+
+[ ] Android String Resources (strings.xml)
+
+Context: XML format used by Android apps. Keys are the `name` attribute of `<string>`
+elements. CDATA wrapping and escape sequences (`\'`, `\"`, `\n`) need special handling.
+
+Format notes: parse with a DOM/SAX XML parser; preserve comments where possible.
+
+[ ] iOS/macOS Strings (.strings)
+
+Context: Key=value text format for Apple platform localization.
+Syntax: `"key" = "value";` with `/* comment */` support.
+
+Format notes: implement a simple line-by-line parser; watch for escaped quotes and
+newlines within values.
+
+[ ] Java Properties (.properties)
+
+Context: Key=value format used in Java applications and Spring Boot. Supports `\uXXXX`
+Unicode escapes and multi-line values with `\` continuation.
+
+Format notes: use the `properties` npm package or implement a small parser following
+the Java `Properties` spec.
+
+[ ] YAML (flat and nested)
+
+Context: Used by Ruby on Rails (nested locale files) and many JS/Python projects. The
+existing JSON handler already flattens nested keys using `|` as separator
+(`lib/file-handlers/json.ts`) — reuse the same `flattenKeys` / `unflattenKeys`
+utilities from `lib/utils/key-encode.ts` for YAML.
+
+Format notes: use `js-yaml` npm package. Decide whether to support only flat YAML or
+also nested (like Rails `en.yml` format).
+
+---
+
+## Collaboration / Workflow
+
+[ ] Comments on translation strings — translators and reviewers can discuss individual strings.
+
+Context: There is currently no way for translators and reviewers to communicate about a
+specific string without going out-of-band. Comments would reduce approval round-trips.
+
+Implementation plan:
+1. Add a `StringComment` model to `prisma/models/locale.prisma`:
+   `id`, `localeStringId`, `authorId`, `body`, `createdAt`, `resolvedAt`.
+2. API: `GET/POST /api/localestrings/[id]/comments`, `PATCH/DELETE /api/comments/[id]`.
+3. UI: Add a "Comments" section in EditorCore's metadata sidebar (right panel). Show
+   thread of comments with author avatar, timestamp, body. Add textarea + submit button.
+4. Show unresolved comment count as badge on the string in LocaleStringList.
+5. Resolve button (REVIEWER+) to mark comment thread closed.
+
+[ ] Notification system — email or in-app notifications for: review requests, approvals,
+new strings added.
+
+Context: No notification infrastructure exists. This is a larger feature — start with
+email (via a transactional email provider) and add in-app later.
+
+Implementation plan:
+1. Add env vars: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`.
+2. Create `lib/email/` with a `sendEmail(to, subject, html)` helper using `nodemailer`.
+3. Define notification triggers as hooks in server actions:
+   - New string added → notify project translators.
+   - Translation submitted → notify project reviewers.
+   - Translation approved → notify the translator who submitted it.
+4. Add a `NotificationPreference` model so users can opt out per notification type.
+5. In-app notifications: add a `Notification` model and a bell icon in the main layout
+   with a dropdown showing recent unread notifications.
+
+[ ] Translation history / audit log — see all past translations for a string and who made them.
+
+Context: The `Translation` model already stores all submissions with `authorId` and
+`createdAt` — the data exists. The editor currently shows translation history in
+EditorCore but only for the selected string. A dedicated audit log view is missing.
+
+Implementation plan:
+1. Ensure `Translation` records are never hard-deleted (use soft-delete or keep history).
+   Current delete action in `suggest.ts` hard-deletes — reconsider or add a `deletedAt`
+   field.
+2. In EditorCore, the existing history list is the foundation — verify it shows all past
+   translations including deleted/overwritten ones.
+3. Add a project-level activity log page (`/project/[slug]/activity`) showing all
+   translation events across all files with filters for date range, user, and file.
+4. Expose via `GET /api/projects/[id]/activity` for external audit tooling.
+
+[ ] String assignment — assign specific strings to specific translators.
+
+Context: In large projects, work needs to be divided between multiple translators.
+Assignment would let a project ADMIN/MODERATOR delegate strings and give translators
+a focused work queue.
+
+Implementation plan:
+1. Add `assignedToId` (nullable userId) to the `LocaleString` model and migrate.
+2. In EditorCore metadata sidebar, add an "Assigned to" user selector (MODERATOR+).
+3. Add "Assigned to me" filter option in `Filter.tsx` / `LocaleStringList.tsx`.
+4. Server action `assignString(localeStringId, userId)` with role check.
+5. Optionally trigger a notification to the assigned user (requires notification system).
+
+[ ] Batch operations — approve multiple strings at once, bulk delete suggestions.
+
+Context: Reviewers working on large files currently have to approve strings one by one
+in EditorCore. Batch operations would significantly speed up the review workflow.
+
+Implementation plan:
+1. Add checkbox column to `LocaleStringList` with a "Select all" toggle.
+2. Show a floating action bar when strings are selected, with:
+   - "Approve selected" (REVIEWER+) — calls `batchApprove(translationIds[])`.
+   - "Delete selected" (MODERATOR+) — calls `batchDelete(translationIds[])`.
+3. Server actions perform permission checks per string before operating.
+4. After batch action, revalidate the page and clear the selection.
+5. Show progress/result as a toast notification (requires a toast UI component).
+
+---
+
+## Production / Infrastructure
+
+[ ] Re-enable Prisma migrations in Docker entrypoint — `docker-entrypoint.sh` has
+`npx prisma migrate deploy` commented out. Fix and re-enable so deployments
+automatically apply schema changes.
+
+Context: The comment in `docker-entrypoint.sh` says "TODO: Make migrations work in
+production". The likely issue is that `prisma migrate deploy` requires the Prisma
+binary to be available in the production image, and the current Dockerfile may not
+include it in the final stage. The `output: "standalone"` Next.js build copies only
+the minimal set of files needed to run the server.
+
+Implementation plan:
+1. Check the Dockerfile — verify whether `prisma` CLI and the generated client are
+   present in the final image stage. If using multi-stage builds, ensure the Prisma
+   binary and `prisma/migrations/` folder are copied over.
+2. Add `COPY prisma ./prisma` and `RUN npx prisma generate` to the production stage if
+   missing.
+3. Uncomment `npx prisma migrate deploy` in `docker-entrypoint.sh`.
+4. Test locally: `docker compose up --build` then verify the migration runs on startup.
+5. Consider adding a startup health check that waits for the DB to be ready before
+   running migrations (`wait-for-it.sh` or a simple retry loop).
+
+[ ] OpenAPI / Swagger spec — Document all API endpoints so CLI and third-party
+integrations have a machine-readable contract.
+
+Context: The CLI (`speaky-cli`) and any future integrations currently rely on reading
+the source code to understand the API. An OpenAPI spec would enable auto-generated
+client SDKs and make the API self-documenting.
+
+Implementation plan:
+1. Choose an approach: either hand-write `openapi.yaml` and keep it in sync, or use a
+   code-first library like `next-swagger-doc` or `zod-to-openapi` that generates the
+   spec from existing Zod schemas (already used in `lib/schema/`).
+2. Serve the spec at `GET /api/openapi.json`.
+3. Add a Swagger UI page at `/api/docs` using `swagger-ui-react` or a static HTML page
+   pointing at `/api/openapi.json`.
+4. Document all existing endpoints: auth (Bearer token), request body schemas (already
+   in Zod), response shapes, and error codes.
+
+[ ] Pagination for list endpoints — `/api/projects/[projectId]/sourcefiles` and
+other list endpoints return all records without pagination; will not scale.
+
+Context: `GET /api/projects/[projectId]/sourcefiles` in
+`app/api/projects/[projectId]/sourcefiles/route.ts` returns the full `sourceFiles`
+array with no limit. For projects with many source files or locale strings this will
+become a performance problem.
+
+Implementation plan:
+1. Add `?page=1&limit=50` query parameters to list endpoints.
+2. In Prisma queries, add `skip: (page-1) * limit` and `take: limit`.
+3. Return a standard paginated envelope:
+   `{ data: [...], total: number, page: number, limit: number, totalPages: number }`.
+4. Update the CLI to handle paginated responses (iterate pages when pulling all files).
+5. Apply the same pattern to `/api/localestrings` if/when that endpoint is added.
+6. Endpoints to paginate in priority order: sourcefiles list, then any future strings
+   or translations list endpoints.

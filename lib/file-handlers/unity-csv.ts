@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { FileHandler, OutputFile } from '../file-handler';
+import { FileHandler, ImportTranslationsOptions, ImportTranslationsResult, OutputFile } from '../file-handler';
 import { SourceFile } from '../generated/prisma/client';
 import { getFallbackTranslation } from '../utils/translation-fallback';
 import { getExportPath } from './get-export-path';
@@ -8,8 +8,99 @@ export const unityCsvHandler: FileHandler = {
 	title: 'Unity CSV',
 	fileExtensions: ['csv'],
 	import: importFunc,
+	importTranslations: importTranslationsFunc,
 	export: exportFunc,
 };
+
+async function importTranslationsFunc(
+	sourceFile: SourceFile,
+	fileContent: string,
+	{ language, conflictMode, autoApprove, userId }: ImportTranslationsOptions,
+): Promise<ImportTranslationsResult> {
+	const [firstLine, ...lines] = fileContent.split('\n');
+	if (!firstLine) throw new Error('Missing CSV headers');
+
+	const splitHeaders = firstLine.split(',');
+	const headerMap: Record<number, string> = {};
+	splitHeaders.forEach((header, index) => {
+		const startBraceletPos = header.lastIndexOf('(');
+		const endBraceletPos = header.lastIndexOf(')');
+		if (startBraceletPos + 3 === endBraceletPos) {
+			header = header.substring(startBraceletPos + 1, endBraceletPos);
+		}
+		headerMap[index] = header.trim();
+	});
+
+	const langColIndex = Object.entries(headerMap).find(([, h]) => h === language)?.[0];
+	if (langColIndex === undefined) {
+		throw new Error(`Language column "${language}" not found in CSV`);
+	}
+	const keyColIndex = Object.entries(headerMap).find(([, h]) => h === 'Key')?.[0];
+	if (keyColIndex === undefined) {
+		throw new Error('Key column not found in CSV');
+	}
+
+	let imported = 0, skipped = 0, notFound = 0;
+
+	await db.$transaction(async (tx) => {
+		for (const line of lines) {
+			if (!line.trim()) continue;
+			const splitLine = line
+				.split(',')
+				.map((item) => item.replace(/^"|"$/g, '').replace(/""/g, '"'));
+
+			const key = splitLine[Number(keyColIndex)];
+			const value = splitLine[Number(langColIndex)] ?? '';
+			if (!key) continue;
+
+			const localeString = await tx.localeString.findUnique({
+				where: { sourceFileId_key: { sourceFileId: sourceFile.id, key } },
+				include: { translations: { where: { language } } },
+			});
+
+			if (!localeString) {
+				notFound++;
+				continue;
+			}
+
+			const existing = localeString.translations[0];
+
+			if (existing) {
+				if (conflictMode === 'SKIP_EXISTING') {
+					skipped++;
+					continue;
+				}
+				if (conflictMode === 'SKIP_APPROVED' && existing.approvedAt !== null) {
+					skipped++;
+					continue;
+				}
+				await tx.translation.update({
+					where: { id: existing.id },
+					data: {
+						content: value,
+						authorId: userId,
+						approvedAt: autoApprove ? new Date() : existing.approvedAt,
+						approvedBy: autoApprove ? userId : existing.approvedBy,
+					},
+				});
+			} else {
+				await tx.translation.create({
+					data: {
+						language,
+						content: value,
+						localeStringId: localeString.id,
+						authorId: userId,
+						approvedAt: autoApprove ? new Date() : null,
+						approvedBy: autoApprove ? userId : null,
+					},
+				});
+			}
+			imported++;
+		}
+	});
+
+	return { imported, skipped, notFound };
+}
 
 async function importFunc(sourceFile: SourceFile, fileContent: string) {
 	const [firstLine, ...lines] = fileContent.split('\n');

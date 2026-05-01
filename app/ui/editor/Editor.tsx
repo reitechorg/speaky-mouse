@@ -8,6 +8,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { decodeTreeKey } from '@/lib/utils/key-encode';
 import { FilterOptions } from './Filter';
+import { runQaChecks } from '@/lib/qa';
 
 export type Translation = {
 	id: string;
@@ -227,20 +228,34 @@ export function Editor(props: {
 						onSelect={setActiveLocaleStringId}
 						list={props.file.localeStrings
 							.sort(sorters[sorterName])
-							.map((localeString) => ({
-								id: localeString.id,
-								text: localeString.content,
-								isActive:
-									localeString.id === activeLocaleStringId,
-								state:
-									localeString.translations.length === 0
-										? 'not-translated'
-										: localeString.translations.some(
-													(t) => t.approvedAt,
-											  )
-											? 'translated'
-											: 'in-review',
-							}))}
+							.map((localeString) => {
+								const relevantTranslation =
+									localeString.translations.find(
+										(t) => t.approvedAt,
+									) ?? localeString.translations[0];
+								const hasQaIssues = relevantTranslation
+									? runQaChecks(
+											localeString.content,
+											relevantTranslation.content,
+											{ maxLength: localeString.maxLength },
+										).length > 0
+									: false;
+								return {
+									id: localeString.id,
+									text: localeString.content,
+									isActive:
+										localeString.id === activeLocaleStringId,
+									state:
+										localeString.translations.length === 0
+											? ('not-translated' as const)
+											: localeString.translations.some(
+														(t) => t.approvedAt,
+												  )
+												? ('translated' as const)
+												: ('in-review' as const),
+									hasQaIssues,
+								};
+							})}
 					/>
 				</div>
 				<div className='col-span-2 py-4 px-6'>

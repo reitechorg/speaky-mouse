@@ -21,7 +21,9 @@ export const auth = betterAuth({
 			config: authConfig.genericOAuthProviders,
 		}),
 	],
-	trustedOrigins: ['http://192.168.1.166:3000', 'http://localhost:3000'],
+	trustedOrigins: process.env.AUTH_TRUSTED_ORIGINS
+		? process.env.AUTH_TRUSTED_ORIGINS.split(',').map((o) => o.trim())
+		: ['http://localhost:3000'],
 });
 
 export const getUser = async () => {

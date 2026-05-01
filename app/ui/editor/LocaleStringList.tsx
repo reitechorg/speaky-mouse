@@ -2,16 +2,23 @@
 
 function StateIndicator(params: {
 	state: 'not-translated' | 'translated' | 'in-review';
+	hasQaIssues?: boolean;
 }) {
 	return (
-		<div
-			className={`w-3 h-3 rounded-2xl shrink-0 ${
-				params.state === 'not-translated'
-					? 'bg-not-translated'
-					: params.state === 'translated'
-					? 'bg-approved'
-					: 'bg-suggested'
-			}`}></div>
+		<div className='relative shrink-0'>
+			<div
+				className={`w-3 h-3 rounded-2xl ${
+					params.state === 'not-translated'
+						? 'bg-not-translated'
+						: params.state === 'translated'
+						? 'bg-approved'
+						: 'bg-suggested'
+				}`}
+			/>
+			{params.hasQaIssues && (
+				<div className='absolute -top-1 -right-1 w-2 h-2 rounded-full bg-yellow-400' />
+			)}
+		</div>
 	);
 }
 
@@ -20,6 +27,7 @@ type LocaleStringParams = {
 	text: string;
 	state: 'not-translated' | 'translated' | 'in-review';
 	isActive: boolean;
+	hasQaIssues?: boolean;
 
 	onSelect?: (id: string) => void;
 };
@@ -32,7 +40,10 @@ function LocaleStringListItem(params: LocaleStringParams) {
 				params.isActive ? 'bg-white/15' : 'hover:bg-white/10'
 			}`}>
 			<div className='flex items-center gap-2 p-2 max-w-full'>
-				<StateIndicator state={params.state} />
+				<StateIndicator
+					state={params.state}
+					hasQaIssues={params.hasQaIssues}
+				/>
 				<div className='truncate'>{params.text}</div>
 			</div>
 			{params.isActive && (

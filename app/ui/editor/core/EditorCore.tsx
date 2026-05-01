@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useExtracted, useFormatter } from 'next-intl';
 import { ProjectRole } from '@/lib/generated/prisma/enums';
 import { ApproveTranslation, DeleteTranslations } from '../actions/suggest';
+import { runQaChecks } from '@/lib/qa';
 
 export function EditorCore(props: {
 	localeString: LocaleString;
@@ -132,133 +133,180 @@ export function EditorCore(props: {
 					{t('Translations')}
 				</div>
 				{props.localeString.translations.length === 0 && (
-					<div className='font-light'>
-						{t('No translations yet.')}
-					</div>
+					<div className='font-light'>{t('No translations yet.')}</div>
 				)}
 				<div className='flex flex-col gap-4'>
-					{props.localeString.translations.map((translation) => (
-						<div
-							key={translation.id}
-							className='flex border-b border-typo-secondary/10 pb-4 last-of-type:border-b-0 items-start'>
-							<div className='flex flex-col gap-2'>
-								<div>{translation.content}</div>
-								<div className='flex items-center gap-1'>
-									<Image
-										src={
-											translation.author.image ||
-											'/icon-square.png'
-										}
-										alt={
-											translation.author.name ||
-											t('User Avatar')
-										}
-										className='w-6 h-6 rounded-full mr-2 object-cover'
-										draggable={false}
-										unoptimized
-										width={64}
-										height={64}
-									/>
-									<Link
-										href={`/users/${translation.author.id}`}
-										className='text-typo-secondary hover:text-typo-primary hover:underline'>
-										{translation.author.name}
-									</Link>
-									<div className='text-typo-secondary ml-2 mr-1 text-sm'>
-										{'•'}
+					{props.localeString.translations.map((translation) => {
+						const qaIssues = runQaChecks(
+							props.localeString.content,
+							translation.content,
+							{ maxLength: props.localeString.maxLength },
+						);
+						return (
+							<div
+								key={translation.id}
+								className='flex flex-col border-b border-typo-secondary/10 pb-4 last-of-type:border-b-0 gap-2'>
+								<div className='flex items-start'>
+									<div className='flex flex-col gap-2'>
+										<div>{translation.content}</div>
+										<div className='flex items-center gap-1'>
+											<Image
+												src={
+													translation.author.image ||
+													'/icon-square.png'
+												}
+												alt={
+													translation.author.name ||
+													t('User Avatar')
+												}
+												className='w-6 h-6 rounded-full mr-2 object-cover'
+												draggable={false}
+												unoptimized
+												width={64}
+												height={64}
+											/>
+											<Link
+												href={`/users/${translation.author.id}`}
+												className='text-typo-secondary hover:text-typo-primary hover:underline'>
+												{translation.author.name}
+											</Link>
+											<div className='text-typo-secondary ml-2 mr-1 text-sm'>
+												{'•'}
+											</div>
+											<div className='text-typo-secondary text-sm'>
+												{format.dateTime(
+													new Date(
+														translation.createdAt,
+													),
+												)}
+											</div>
+											{translation.approvedAt && (
+												<div className='text-approved text-sm flex items-center gap-1 ml-4'>
+													<svg
+														width='16'
+														height='16'
+														viewBox='0 0 24 24'
+														fill='none'
+														xmlns='http://www.w3.org/2000/svg'>
+														<path
+															d='M20 6L9 17L4 12'
+															stroke='currentColor'
+															strokeWidth='2'
+															strokeLinecap='round'
+															strokeLinejoin='round'
+														/>
+													</svg>
+													{t('Approved by')}{' '}
+													<Link
+														href={`/users/${translation.approver?.id}`}
+														className='underline hover:text-approved/60'>
+														{
+															translation.approver
+																?.name
+														}
+													</Link>
+												</div>
+											)}
+										</div>
 									</div>
-									<div className='text-typo-secondary text-sm'>
-										{format.dateTime(
-											new Date(translation.createdAt),
+									<div className='flex gap-2 ml-auto'>
+										{props.userRole !==
+											ProjectRole.TRANSLATOR &&
+											!translation.approvedAt && (
+												<form action={ApproveTranslation}>
+													<input
+														type='hidden'
+														name='translation-id'
+														value={translation.id}
+													/>
+													<button
+														title={t(
+															'Approve translation',
+														)}
+														className='w-6 h-6 text-typo-secondary hover:text-approved cursor-pointer'>
+														<svg
+															width='100%'
+															height='100%'
+															viewBox='0 0 24 24'
+															fill='none'
+															xmlns='http://www.w3.org/2000/svg'>
+															<path
+																d='M20 6L9 17L4 12'
+																stroke='currentColor'
+																strokeWidth='2'
+																strokeLinecap='round'
+																strokeLinejoin='round'
+															/>
+														</svg>
+													</button>
+												</form>
+											)}
+										{(props.userRole !==
+											ProjectRole.TRANSLATOR ||
+											(props.userId ===
+												translation.authorId &&
+												!translation.approvedAt)) && (
+											<form action={DeleteTranslations}>
+												<input
+													type='hidden'
+													name='translation-id'
+													value={translation.id}
+												/>
+												<button
+													title={t('Delete translation')}
+													className='w-6 h-6 text-typo-secondary hover:text-red-400 cursor-pointer'>
+													<svg
+														width='100%'
+														height='100%'
+														viewBox='0 0 24 24'
+														fill='none'
+														xmlns='http://www.w3.org/2000/svg'>
+														<path
+															d='M16 6V5.2C16 4.0799 16 3.51984 15.782 3.09202C15.5903 2.71569 15.2843 2.40973 14.908 2.21799C14.4802 2 13.9201 2 12.8 2H11.2C10.0799 2 9.51984 2 9.09202 2.21799C8.71569 2.40973 8.40973 2.71569 8.21799 3.09202C8 3.51984 8 4.0799 8 5.2V6M10 11.5V16.5M14 11.5V16.5M3 6H21M19 6V17.2C19 18.8802 19 19.7202 18.673 20.362C18.3854 20.9265 17.9265 21.3854 17.362 21.673C16.7202 22 15.8802 22 14.2 22H9.8C8.11984 22 7.27976 22 6.63803 21.673C6.07354 21.3854 5.6146 20.9265 5.32698 20.362C5 19.7202 5 18.8802 5 17.2V6'
+															stroke='currentColor'
+															strokeWidth='2'
+															strokeLinecap='round'
+															strokeLinejoin='round'
+														/>
+													</svg>
+												</button>
+											</form>
 										)}
 									</div>
-									{translation.approvedAt && (
-										<div className='text-approved text-sm flex items-center gap-1 ml-4'>
-											<svg
-												width='16'
-												height='16'
-												viewBox='0 0 24 24'
-												fill='none'
-												xmlns='http://www.w3.org/2000/svg'>
-												<path
-													d='M20 6L9 17L4 12'
-													stroke='currentColor'
-													strokeWidth='2'
-													strokeLinecap='round'
-													strokeLinejoin='round'
-												/>
-											</svg>
-											{t('Approved by')}{' '}
-											<Link
-												href={`/users/${translation.approver?.id}`}
-												className='underline hover:text-approved/60'>
-												{translation.approver?.name}
-											</Link>
-										</div>
-									)}
 								</div>
-							</div>
-							<div className='flex gap-2 ml-auto'>
-								{props.userRole !== ProjectRole.TRANSLATOR &&
-									!translation.approvedAt && (
-										<form action={ApproveTranslation}>
-											<input
-												type='hidden'
-												name='translation-id'
-												value={translation.id}
-											/>
-											<button
-												title={t('Approve translation')}
-												className='w-6 h-6 text-typo-secondary hover:text-approved cursor-pointer'>
+								{qaIssues.length > 0 && (
+									<div className='flex flex-col gap-1 rounded-md bg-black/20 px-3 py-2'>
+										{qaIssues.map((issue, i) => (
+											<div
+												key={i}
+												className={`flex items-start gap-2 text-sm ${
+													issue.severity === 'error'
+														? 'text-red-400'
+														: 'text-yellow-400'
+												}`}>
 												<svg
-													width='100%'
-													height='100%'
+													className='shrink-0 mt-0.5'
+													width='14'
+													height='14'
 													viewBox='0 0 24 24'
 													fill='none'
 													xmlns='http://www.w3.org/2000/svg'>
 													<path
-														d='M20 6L9 17L4 12'
+														d='M12 9V13M12 17H12.01M10.29 3.86L1.82 18C1.64 18.3 1.64 18.7 1.82 19C2 19.3 2.32 19.5 2.66 19.5H21.34C21.68 19.5 22 19.3 22.18 19C22.36 18.7 22.36 18.3 22.18 18L13.71 3.86C13.53 3.56 13.21 3.37 12.86 3.37C12.51 3.37 12.19 3.56 12.01 3.86H10.29Z'
 														stroke='currentColor'
 														strokeWidth='2'
 														strokeLinecap='round'
 														strokeLinejoin='round'
 													/>
 												</svg>
-											</button>
-										</form>
-									)}
-								{(props.userRole !== ProjectRole.TRANSLATOR ||
-									(props.userId === translation.authorId &&
-										!translation.approvedAt)) && (
-									<form action={DeleteTranslations}>
-										<input
-											type='hidden'
-											name='translation-id'
-											value={translation.id}
-										/>
-										<button
-											title={t('Delete translation')}
-											className='w-6 h-6 text-typo-secondary hover:text-red-400 cursor-pointer'>
-											<svg
-												width='100%'
-												height='100%'
-												viewBox='0 0 24 24'
-												fill='none'
-												xmlns='http://www.w3.org/2000/svg'>
-												<path
-													d='M16 6V5.2C16 4.0799 16 3.51984 15.782 3.09202C15.5903 2.71569 15.2843 2.40973 14.908 2.21799C14.4802 2 13.9201 2 12.8 2H11.2C10.0799 2 9.51984 2 9.09202 2.21799C8.71569 2.40973 8.40973 2.71569 8.21799 3.09202C8 3.51984 8 4.0799 8 5.2V6M10 11.5V16.5M14 11.5V16.5M3 6H21M19 6V17.2C19 18.8802 19 19.7202 18.673 20.362C18.3854 20.9265 17.9265 21.3854 17.362 21.673C16.7202 22 15.8802 22 14.2 22H9.8C8.11984 22 7.27976 22 6.63803 21.673C6.07354 21.3854 5.6146 20.9265 5.32698 20.362C5 19.7202 5 18.8802 5 17.2V6'
-													stroke='currentColor'
-													strokeWidth='2'
-													strokeLinecap='round'
-													strokeLinejoin='round'
-												/>
-											</svg>
-										</button>
-									</form>
+												<span>{issue.message}</span>
+											</div>
+										))}
+									</div>
 								)}
 							</div>
-						</div>
-					))}
+						);
+					})}
 				</div>
 			</div>
 		</div>

@@ -1,16 +1,12 @@
+import { extractBearerToken, validateApiKeyAccess } from '@/lib/api/validate-token';
 import { db } from '@/lib/db';
 import { sourceFileInputSchema } from '@/lib/schema/sourceFileSchema';
 import { NextRequest } from 'next/server';
 
 export async function POST(req: NextRequest) {
-	const headers = await req.headers;
-	const authHeader = headers.get('Authorization');
-
-	if (!authHeader || !authHeader.startsWith('Bearer ')) {
-		return new Response('Unauthorized', { status: 401 });
-	}
-
-	const token = authHeader.substring(7);
+	const tokenResult = extractBearerToken(req);
+	if (tokenResult instanceof Response) return tokenResult;
+	const { token } = tokenResult;
 
 	const body = await req.json();
 	const parsedBody = sourceFileInputSchema.safeParse(body);
@@ -30,27 +26,19 @@ export async function POST(req: NextRequest) {
 	});
 
 	if (!projectData) {
-		return new Response('Project not found', { status: 404 });
+		return Response.json({ error: 'Project not found' }, { status: 404 });
 	}
 
-	const projectApiKeys = projectData.apiKeys || [];
-	const validToken = projectApiKeys.find((key) => key.key === token);
-
-	if (!validToken) {
-		return new Response('Unauthorized', { status: 401 });
-	}
-
-	if (validToken.access === 'READ_ONLY') {
-		return new Response('Forbidden: Read-only access', { status: 403 });
-	}
+	const authResult = validateApiKeyAccess(projectData.apiKeys, token, true);
+	if (authResult instanceof Response) return authResult;
 
 	const fileAlreadyExists = projectData.sourceFiles.some(
 		({ title }) => title === parsedBody.data.title,
 	);
 
 	if (fileAlreadyExists) {
-		return new Response(
-			'Source file with this title already exists in this project',
+		return Response.json(
+			{ error: 'Source file with this title already exists in this project' },
 			{ status: 400 },
 		);
 	}

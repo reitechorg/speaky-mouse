@@ -16,7 +16,18 @@ export async function SuggestStringAction(formData: FormData) {
 	const localeStringId = formData.get('locale-string-id') as string;
 	const language = formData.get('language') as string;
 
-	// TODO: Validation
+	if (!content || content.trim().length === 0) {
+		throw new Error('Translation content cannot be empty');
+	}
+	if (content.length > 10000) {
+		throw new Error('Translation content is too long (max 10 000 characters)');
+	}
+	if (!localeStringId) {
+		throw new Error('Missing locale string ID');
+	}
+	if (!language) {
+		throw new Error('Missing target language');
+	}
 
 	const membership = await db.projectMember.findFirst({
 		where: {

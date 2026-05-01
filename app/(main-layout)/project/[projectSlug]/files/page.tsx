@@ -4,9 +4,9 @@ import { db } from '@/lib/db';
 import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { uploadFileAction } from './upload-file-action';
-import { Modal } from '@/app/ui/Modal';
 import { getExtracted } from 'next-intl/server';
+import { CreateSourceFileModal } from './CreateSourceFileModal';
+import { SourceFileCard } from './SourceFileCard';
 
 export default async function ProjectFilesPage({
 	params,
@@ -26,7 +26,9 @@ export default async function ProjectFilesPage({
 			slug: projectSlug,
 		},
 		include: {
-			sourceFiles: true,
+			sourceFiles: {
+				include: { targetLanguages: true },
+			},
 			defaultTargetLanguages: true,
 			members: {
 				where: {
@@ -93,9 +95,13 @@ export default async function ProjectFilesPage({
 						{t('Source files')}
 					</h2>
 					<div className='flex items-end'>
-						<button className='text-primary hover:underline cursor-pointer'>
-							+ {t('Add new source file')}
-						</button>
+						<CreateSourceFileModal
+							projectSlug={projectSlug}
+							defaultSourceLanguage={project.defaultSourceLanguage}
+							defaultTargetLanguages={project.defaultTargetLanguages.map(
+								(l) => l.language,
+							)}
+						/>
 					</div>
 				</div>
 				<div className='mt-4 flex flex-col gap-4'>
@@ -107,32 +113,12 @@ export default async function ProjectFilesPage({
 						</p>
 					)}
 					{project.sourceFiles.map((file) => (
-						<div
+						<SourceFileCard
 							key={file.id}
-							className='p-4 border border-primary/10 rounded-md flex flex-col gap-2'>
-							<h3 className='text-typo-primary font-medium text-lg'>
-								{file.title} ({file.parser})
-							</h3>
-							<form
-								action={uploadFileAction}
-								className='flex items-center gap-2'>
-								<input
-									type='hidden'
-									name='fileId'
-									value={file.id}
-								/>
-								<input
-									type='file'
-									name='file'
-									accept='application/json'
-								/>
-								<button
-									className='text-primary hover:underline cursor-pointer'
-									type='submit'>
-									{t('Upload new version')}
-								</button>
-							</form>
-						</div>
+							file={file}
+							targetLanguages={file.targetLanguages.map((l) => l.language)}
+							projectSlug={projectSlug}
+						/>
 					))}
 				</div>
 			</div>

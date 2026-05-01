@@ -55,11 +55,22 @@ export async function createProject(
 		};
 	}
 
+	const baseSlug = slugify(name);
+	const existingSlugs = await db.project.findMany({
+		where: { slug: { startsWith: baseSlug } },
+		select: { slug: true },
+	});
+	const slugSet = new Set(existingSlugs.map((p) => p.slug));
+	let slug = baseSlug;
+	for (let i = 2; slugSet.has(slug); i++) {
+		slug = `${baseSlug}-${i}`;
+	}
+
 	const project = await db.project.create({
 		data: {
 			title: name.trim(),
 			description: description ? description.trim() : null,
-			slug: slugify(name),
+			slug,
 			defaultSourceLanguage: sourceLang?.trim() || 'en',
 			members: {
 				create: {
