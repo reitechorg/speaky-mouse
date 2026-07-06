@@ -5,7 +5,13 @@ import { EditorHeader } from './EditorHeader';
 import { LocaleStringList } from './LocaleStringList';
 import { EditorCore } from './core/EditorCore';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import {
+	useEffect,
+	useMemo,
+	useOptimistic,
+	useRef,
+	useState,
+} from 'react';
 import { decodeTreeKey } from '@/lib/utils/key-encode';
 import { FilterOptions } from './Filter';
 import { runQaChecks } from '@/lib/qa';
@@ -149,38 +155,106 @@ export function Editor(props: {
 		window.history.replaceState({}, '', url.toString());
 	};
 
-	const [sortedIds, setSortedIds] = useState<string[]>([]);
 	const sortBy = params.get('sort') || defaultStringSorter;
 	const sorterName = (
 		Object.keys(sorters).includes(sortBy) ? sortBy : defaultStringSorter
 	) as keyof typeof sorters;
 
-	const activeLocaleStringIndex = props.file.localeStrings.findIndex(
+	const [optimisticLocaleStrings, addOptimisticTranslation] = useOptimistic(
+		props.file.localeStrings,
+		(
+			state: LocaleString[],
+			update: { localeStringId: string; translation: Translation },
+		) =>
+			state.map((ls) =>
+				ls.id === update.localeStringId
+					? {
+							...ls,
+							translations: [update.translation, ...ls.translations],
+						}
+					: ls,
+			),
+	);
+
+	const localeStringsById = useMemo(() => {
+		const map = new Map<string, LocaleString>();
+		for (const localeString of optimisticLocaleStrings) {
+			map.set(localeString.id, localeString);
+		}
+		return map;
+	}, [optimisticLocaleStrings]);
+
+	const idsKey = props.file.localeStrings.map((ls) => ls.id).join(',');
+
+	const [orderedIds, setOrderedIds] = useState<string[]>(() =>
+		getSortedIds([...props.file.localeStrings], sorters[sorterName]),
+	);
+	const prevSorterRef = useRef(sorterName);
+
+	useEffect(() => {
+		const sorterChanged = prevSorterRef.current !== sorterName;
+		prevSorterRef.current = sorterName;
+
+		if (sorterChanged) {
+			setOrderedIds(
+				getSortedIds([...props.file.localeStrings], sorters[sorterName]),
+			);
+			return;
+		}
+
+		setOrderedIds((prevOrder) => {
+			const currentIds = new Set(
+				props.file.localeStrings.map((ls) => ls.id),
+			);
+			const kept = prevOrder.filter((id) => currentIds.has(id));
+			const keptSet = new Set(kept);
+			const added = getSortedIds(
+				props.file.localeStrings.filter(
+					(ls) => !keptSet.has(ls.id),
+				),
+				sorters[sorterName],
+			);
+
+			if (added.length === 0 && kept.length === prevOrder.length) {
+				return prevOrder;
+			}
+
+			return [...kept, ...added];
+		});
+		// Only recompute ordering when the sort option changes or locale
+		// strings are added/removed — not when translation content/state
+		// changes, so edits don't shift a string's position in the list.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [sorterName, idsKey]);
+
+	const orderedLocaleStrings = orderedIds
+		.map((id) => localeStringsById.get(id))
+		.filter((ls): ls is LocaleString => !!ls);
+
+	const activeLocaleStringIndex = orderedLocaleStrings.findIndex(
 		(ls) => ls.id === activeLocaleStringId,
 	);
 	const activeLocaleString =
-		props.file.localeStrings[activeLocaleStringIndex] || null;
+		orderedLocaleStrings[activeLocaleStringIndex] || null;
 
 	const prevLocaleString = useMemo(() => {
 		return activeLocaleStringIndex > 0
 			? () => {
 					setActiveLocaleStringId(
-						props.file.localeStrings[activeLocaleStringIndex - 1]
-							.id,
+						orderedLocaleStrings[activeLocaleStringIndex - 1].id,
 					);
 				}
 			: undefined;
-	}, [activeLocaleStringIndex, props.file.localeStrings]);
+	}, [activeLocaleStringIndex, orderedLocaleStrings]);
 	const nextLocaleString = useMemo(() => {
-		return activeLocaleStringIndex < props.file.localeStrings.length - 1
+		return activeLocaleStringIndex < orderedLocaleStrings.length - 1
 			? () => {
 					setActiveLocaleStringId(
-						props.file.localeStrings[activeLocaleStringIndex + 1]
-							.id,
+						orderedLocaleStrings[activeLocaleStringIndex + 1].id,
 					);
 				}
 			: undefined;
-	}, [activeLocaleStringIndex, props.file.localeStrings]);
+	}, [activeLocaleStringIndex, orderedLocaleStrings]);
 
 	const userRole = props.file.project.members.find(
 		(m) => m.userId === props.userId,
@@ -226,8 +300,7 @@ export function Editor(props: {
 					/>
 					<LocaleStringList
 						onSelect={setActiveLocaleStringId}
-						list={props.file.localeStrings
-							.sort(sorters[sorterName])
+						list={orderedLocaleStrings
 							.map((localeString) => {
 								const relevantTranslation =
 									localeString.translations.find(
@@ -268,6 +341,7 @@ export function Editor(props: {
 							nextLocaleString={nextLocaleString}
 							userId={props.userId}
 							userRole={userRole}
+							onAddOptimisticTranslation={addOptimisticTranslation}
 						/>
 					)}
 				</div>

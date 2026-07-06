@@ -1,21 +1,51 @@
 import { QaCheck, QaIssue } from '../types';
 
 // Ordered from most specific to least to avoid double-matching
-const VARIABLE_PATTERNS: RegExp[] = [
-	/\{\{[^}]+\}\}/g, // {{variable}}
-	/\{[^}]+\}/g, // {variable}
-	/%\([^)]+\)[sdf]/g, // %(variable)s
-	/%[0-9]+\$[sdf]/g, // %1$s
-	/%[sdf]/g, // %s %d %f
-];
+const VARIABLE_PATTERN = new RegExp(
+	[
+		/\{\{[^}]+\}\}/, // {{variable}}
+		/\{[^}]+\}/, // {variable}
+		/%\([^)]+\)[sdf]/, // %(variable)s
+		/%[0-9]+\$[sdf]/, // %1$s
+		/%[sdf]/, // %s %d %f
+	]
+		.map((r) => r.source)
+		.join('|'),
+	'g',
+);
 
-function extractVariables(text: string): string[] {
+export type VariableSegment = {
+	text: string;
+	isVariable: boolean;
+};
+
+export function splitVariableSegments(text: string): VariableSegment[] {
+	const segments: VariableSegment[] = [];
+	let lastIndex = 0;
+
+	for (const match of text.matchAll(VARIABLE_PATTERN)) {
+		const index = match.index;
+		if (index > lastIndex) {
+			segments.push({
+				text: text.slice(lastIndex, index),
+				isVariable: false,
+			});
+		}
+		segments.push({ text: match[0], isVariable: true });
+		lastIndex = index + match[0].length;
+	}
+
+	if (lastIndex < text.length) {
+		segments.push({ text: text.slice(lastIndex), isVariable: false });
+	}
+
+	return segments;
+}
+
+export function extractVariables(text: string): string[] {
 	const found = new Set<string>();
-	let remaining = text;
-	for (const pattern of VARIABLE_PATTERNS) {
-		const matches = remaining.match(pattern) ?? [];
-		matches.forEach((m) => found.add(m));
-		remaining = remaining.replace(pattern, '');
+	for (const match of text.matchAll(VARIABLE_PATTERN)) {
+		found.add(match[0]);
 	}
 	return [...found].sort();
 }
@@ -39,7 +69,7 @@ export const checkVariables: QaCheck = ({ source, translation }) => {
 	if (extra.length > 0) {
 		issues.push({
 			checkType: 'variables_extra',
-			severity: 'warning',
+			severity: 'error',
 			message: `Extra variables in translation not present in source: ${extra.join(', ')}`,
 		});
 	}

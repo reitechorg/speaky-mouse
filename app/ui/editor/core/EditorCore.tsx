@@ -1,11 +1,13 @@
 import Image from 'next/image';
-import { LocaleString } from '../Editor';
-import { SuggestionForm } from './SuggestionForm';
+import { LocaleString, Translation } from '../Editor';
+import { SuggestionForm, SuggestionFormHandle } from './SuggestionForm';
 import Link from 'next/link';
 import { useExtracted, useFormatter } from 'next-intl';
+import { useRef } from 'react';
 import { ProjectRole } from '@/lib/generated/prisma/enums';
 import { ApproveTranslation, DeleteTranslations } from '../actions/suggest';
 import { runQaChecks } from '@/lib/qa';
+import { VariableHighlightedText } from './VariableHighlightedText';
 
 export function EditorCore(props: {
 	localeString: LocaleString;
@@ -14,9 +16,14 @@ export function EditorCore(props: {
 	userRole: ProjectRole;
 	prevLocaleString?: () => void;
 	nextLocaleString?: () => void;
+	onAddOptimisticTranslation: (update: {
+		localeStringId: string;
+		translation: Translation;
+	}) => void;
 }) {
 	const format = useFormatter();
 	const t = useExtracted();
+	const suggestionFormRef = useRef<SuggestionFormHandle>(null);
 	return (
 		<div className='flex flex-col gap-6'>
 			<div className='flex flex-col gap-4'>
@@ -118,14 +125,28 @@ export function EditorCore(props: {
 						</button>
 					</div>
 				</div>
-				<div>{props.localeString.content}</div>
+				<VariableHighlightedText
+					text={props.localeString.content}
+					title={t('Click to insert into translation')}
+					onVariableClick={(value) =>
+						suggestionFormRef.current?.insertVariable(value)
+					}
+				/>
 			</div>
 
 			<SuggestionForm
+				ref={suggestionFormRef}
 				id={props.localeString.id}
 				maxLength={props.localeString.maxLength}
 				originalContent={props.localeString.content}
 				language={props.language}
+				nextLocaleString={props.nextLocaleString}
+				addOptimisticTranslation={(translation) =>
+					props.onAddOptimisticTranslation({
+						localeStringId: props.localeString.id,
+						translation,
+					})
+				}
 			/>
 
 			<div className='flex flex-col gap-2'>
@@ -148,7 +169,9 @@ export function EditorCore(props: {
 								className='flex flex-col border-b border-typo-secondary/10 pb-4 last-of-type:border-b-0 gap-2'>
 								<div className='flex items-start'>
 									<div className='flex flex-col gap-2'>
-										<div>{translation.content}</div>
+										<VariableHighlightedText
+											text={translation.content}
+										/>
 										<div className='flex items-center gap-1'>
 											<Image
 												src={

@@ -1,20 +1,106 @@
 import { useExtracted } from 'next-intl';
-import { useState } from 'react';
+import {
+	forwardRef,
+	useImperativeHandle,
+	useMemo,
+	useRef,
+	useState,
+	useSyncExternalStore,
+	useTransition,
+} from 'react';
 import { SuggestStringAction } from '../actions/suggest';
+import { runQaChecks } from '@/lib/qa';
+import { authClient } from '@/lib/auth-client';
+import { Translation } from '../Editor';
+import {
+	HighlightedTextarea,
+	HighlightedTextareaHandle,
+} from './HighlightedTextarea';
 
-export function SuggestionForm(props: {
-	maxLength?: number | null;
-	originalContent: string;
-	id: string;
-	language: string;
-}) {
+export type SuggestionFormHandle = {
+	insertVariable: (value: string) => void;
+};
+
+function subscribeNoop() {
+	return () => {};
+}
+function getIsMacSnapshot() {
+	return /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
+}
+function getIsMacServerSnapshot() {
+	return false;
+}
+
+export const SuggestionForm = forwardRef<
+	SuggestionFormHandle,
+	{
+		maxLength?: number | null;
+		originalContent: string;
+		id: string;
+		language: string;
+		nextLocaleString?: () => void;
+		addOptimisticTranslation?: (translation: Translation) => void;
+	}
+>(function SuggestionForm(props, ref) {
 	const [content, setContent] = useState<string>('');
+	const isMac = useSyncExternalStore(
+		subscribeNoop,
+		getIsMacSnapshot,
+		getIsMacServerSnapshot,
+	);
 	const t = useExtracted();
+	const formRef = useRef<HTMLFormElement>(null);
+	const textareaRef = useRef<HighlightedTextareaHandle>(null);
+	const [, startTransition] = useTransition();
+	const session = authClient.useSession();
+
+	useImperativeHandle(ref, () => ({
+		insertVariable: (value: string) => {
+			textareaRef.current?.insertAtCursor(value);
+		},
+	}));
+
+	const submitKey = isMac ? '⌘' : 'Ctrl';
+	const nextKey = isMac ? '⌥' : 'Alt';
+
+	async function submitTranslation(formData: FormData) {
+		const submittedContent = (formData.get('content') as string) ?? '';
+		const user = session.data?.user;
+		if (submittedContent.trim() !== '' && user) {
+			props.addOptimisticTranslation?.({
+				id: `optimistic-${Date.now()}`,
+				language: props.language,
+				content: submittedContent,
+				authorId: user.id,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+				approvedBy: null,
+				approvedAt: null,
+				author: {
+					id: user.id,
+					image: user.image ?? null,
+					name: user.name,
+				},
+			});
+		}
+		await SuggestStringAction(formData);
+	}
+
+	const qaIssues = useMemo(
+		() =>
+			content.trim() === ''
+				? []
+				: runQaChecks(props.originalContent, content, {
+						maxLength: props.maxLength,
+					}),
+		[props.originalContent, props.maxLength, content],
+	);
 
 	return (
 		<form
+			ref={formRef}
 			className='flex flex-col gap-2'
-			action={SuggestStringAction}
+			action={submitTranslation}
 			onSubmit={() => {
 				setContent('');
 			}}>
@@ -23,15 +109,81 @@ export function SuggestionForm(props: {
 			</div>
 			<input type='hidden' name='locale-string-id' value={props.id} />
 			<input type='hidden' name='language' value={props.language} />
-			<textarea
+			<HighlightedTextarea
+				ref={textareaRef}
+				autoFocus
 				placeholder='Enter your translation here'
+				title={`${submitKey}+Enter ${t('to submit')} · ${nextKey}+Enter ${t('to submit & go to next string')}`}
 				className='outline-0 field-sizing-content resize-none min-h-20'
 				value={content}
 				name='content'
-				onChange={(ev) => {
-					setContent(ev.target.value);
+				onChange={setContent}
+				onKeyDown={(ev) => {
+					if (ev.key !== 'Enter' || content.trim() === '') {
+						return;
+					}
+					if (ev.altKey) {
+						ev.preventDefault();
+						const form = formRef.current;
+						if (!form) {
+							return;
+						}
+						const formData = new FormData(form);
+						setContent('');
+						startTransition(async () => {
+							await submitTranslation(formData);
+							props.nextLocaleString?.();
+						});
+					} else if (ev.ctrlKey || ev.metaKey) {
+						ev.preventDefault();
+						formRef.current?.requestSubmit();
+					}
 				}}
 			/>
+			<div className='flex flex-wrap gap-x-4 gap-y-1 text-xs text-typo-secondary'>
+				<span>
+					<kbd className='px-1.5 py-0.5 rounded bg-black/20 font-mono'>
+						{submitKey}+Enter
+					</kbd>{' '}
+					{t('to submit')}
+				</span>
+				<span>
+					<kbd className='px-1.5 py-0.5 rounded bg-black/20 font-mono'>
+						{nextKey}+Enter
+					</kbd>{' '}
+					{t('to submit & go to next string')}
+				</span>
+			</div>
+			{qaIssues.length > 0 && (
+				<div className='flex flex-col gap-1 rounded-md bg-black/20 px-3 py-2'>
+					{qaIssues.map((issue, i) => (
+						<div
+							key={i}
+							className={`flex items-start gap-2 text-sm ${
+								issue.severity === 'error'
+									? 'text-red-400'
+									: 'text-yellow-400'
+							}`}>
+							<svg
+								className='shrink-0 mt-0.5'
+								width='14'
+								height='14'
+								viewBox='0 0 24 24'
+								fill='none'
+								xmlns='http://www.w3.org/2000/svg'>
+								<path
+									d='M12 9V13M12 17H12.01M10.29 3.86L1.82 18C1.64 18.3 1.64 18.7 1.82 19C2 19.3 2.32 19.5 2.66 19.5H21.34C21.68 19.5 22 19.3 22.18 19C22.36 18.7 22.36 18.3 22.18 18L13.71 3.86C13.53 3.56 13.21 3.37 12.86 3.37C12.51 3.37 12.19 3.56 12.01 3.86H10.29Z'
+									stroke='currentColor'
+									strokeWidth='2'
+									strokeLinecap='round'
+									strokeLinejoin='round'
+								/>
+							</svg>
+							<span>{issue.message}</span>
+						</div>
+					))}
+				</div>
+			)}
 			<div className='flex justify-between items-center'>
 				<div className='flex justify-start text-typo-secondary'>
 					<button
@@ -110,4 +262,5 @@ export function SuggestionForm(props: {
 			</div>
 		</form>
 	);
-}
+},
+);
