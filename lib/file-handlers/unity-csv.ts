@@ -163,7 +163,7 @@ async function importFunc(sourceFile: SourceFile, fileContent: string) {
 		}
 
 		if (toCreate.length) {
-			await tx.localeString.createMany({ data: toCreate });
+			await tx.localeString.createMany({ data: toCreate, skipDuplicates: true });
 		}
 
 		// Remove unused keys

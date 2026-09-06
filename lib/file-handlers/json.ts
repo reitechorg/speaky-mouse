@@ -195,7 +195,7 @@ export const jsonFileHandler: FileHandler = {
 			}
 
 			if (toCreate.length) {
-				await tx.localeString.createMany({ data: toCreate });
+				await tx.localeString.createMany({ data: toCreate, skipDuplicates: true });
 			}
 
 			// Remove unused keys
