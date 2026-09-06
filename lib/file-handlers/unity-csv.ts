@@ -121,53 +121,61 @@ async function importFunc(sourceFile: SourceFile, fileContent: string) {
 		headerMap[index] = header;
 	});
 
-	await db.$transaction(async (tx) => {
-		const usedKeys = new Set<string>();
+	const rows: { key: string; content: string }[] = [];
+	for (const lineIndex in lines) {
+		const line = lines[lineIndex];
+		const splitLine = line
+			.split(',')
+			.map((item) => item.replace(/^"|"$/g, '').replace(/""/g, '"'));
+		const obj: Record<string, string> = {};
+		splitLine.forEach((value, index) => {
+			obj[headerMap[index]] = value;
+		});
 
-		for (const lineIndex in lines) {
-			const line = lines[lineIndex];
-			const splitLine = line
-				.split(',')
-				.map((item) => item.replace(/^"|"$/g, '').replace(/""/g, '"'));
-			const obj: Record<string, string> = {};
-			splitLine.forEach((value, index) => {
-				obj[headerMap[index]] = value;
-			});
-
-			const { Key } = obj;
-			if (!Key) {
-				throw new Error(`Missing Key on line ${lineIndex}`);
-			}
-
-			usedKeys.add(Key);
-			await tx.localeString.upsert({
-				where: {
-					sourceFileId_key: {
-						sourceFileId: sourceFile.id,
-						key: Key,
-					},
-				},
-				update: {
-					content: obj[sourceFile.sourceLanguage],
-				},
-				create: {
-					sourceFileId: sourceFile.id,
-					key: Key,
-					content: obj[sourceFile.sourceLanguage],
-				},
-			});
-
-			// Remove unused keys
-			await tx.localeString.deleteMany({
-				where: {
-					sourceFileId: sourceFile.id,
-					key: {
-						notIn: Array.from(usedKeys),
-					},
-				},
-			});
+		const { Key } = obj;
+		if (!Key) {
+			throw new Error(`Missing Key on line ${lineIndex}`);
 		}
-	});
+
+		rows.push({ key: Key, content: obj[sourceFile.sourceLanguage] });
+	}
+
+	const usedKeys = rows.map((row) => row.key);
+
+	await db.$transaction(async (tx) => {
+		const existing = await tx.localeString.findMany({
+			where: { sourceFileId: sourceFile.id },
+			select: { key: true, content: true },
+		});
+		const existingByKey = new Map(existing.map((e) => [e.key, e.content]));
+
+		const toCreate: { sourceFileId: string; key: string; content: string }[] = [];
+		for (const { key, content } of rows) {
+			const existingContent = existingByKey.get(key);
+			if (existingContent === undefined) {
+				toCreate.push({ sourceFileId: sourceFile.id, key, content });
+			} else if (existingContent !== content) {
+				await tx.localeString.update({
+					where: { sourceFileId_key: { sourceFileId: sourceFile.id, key } },
+					data: { content },
+				});
+			}
+		}
+
+		if (toCreate.length) {
+			await tx.localeString.createMany({ data: toCreate });
+		}
+
+		// Remove unused keys
+		await tx.localeString.deleteMany({
+			where: {
+				sourceFileId: sourceFile.id,
+				key: {
+					notIn: usedKeys,
+				},
+			},
+		});
+	}, { timeout: 30000 });
 }
 
 function escapeCSV(value: string): string {

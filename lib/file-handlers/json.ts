@@ -171,26 +171,31 @@ export const jsonFileHandler: FileHandler = {
 			throw new Error('Invalid JSON: expected a top-level object');
 		}
 
+		const pairs = flattenJsonObject(data as Record<string, unknown>);
+		const usedKeys = pairs.map(([key]) => key);
+
 		await db.$transaction(async (tx) => {
-			const usedKeys = new Set<string>();
-			for (const [key, value] of flattenJsonObject(data as Record<string, unknown>)) {
-				usedKeys.add(key);
-				await tx.localeString.upsert({
-					where: {
-						sourceFileId_key: {
-							sourceFileId: sourceFile.id,
-							key: key,
-						},
-					},
-					update: {
-						content: value,
-					},
-					create: {
-						sourceFileId: sourceFile.id,
-						key: key,
-						content: value,
-					},
-				});
+			const existing = await tx.localeString.findMany({
+				where: { sourceFileId: sourceFile.id },
+				select: { key: true, content: true },
+			});
+			const existingByKey = new Map(existing.map((e) => [e.key, e.content]));
+
+			const toCreate: { sourceFileId: string; key: string; content: string }[] = [];
+			for (const [key, value] of pairs) {
+				const existingContent = existingByKey.get(key);
+				if (existingContent === undefined) {
+					toCreate.push({ sourceFileId: sourceFile.id, key, content: value });
+				} else if (existingContent !== value) {
+					await tx.localeString.update({
+						where: { sourceFileId_key: { sourceFileId: sourceFile.id, key } },
+						data: { content: value },
+					});
+				}
+			}
+
+			if (toCreate.length) {
+				await tx.localeString.createMany({ data: toCreate });
 			}
 
 			// Remove unused keys
@@ -198,11 +203,11 @@ export const jsonFileHandler: FileHandler = {
 				where: {
 					sourceFileId: sourceFile.id,
 					key: {
-						notIn: Array.from(usedKeys),
+						notIn: usedKeys,
 					},
 				},
 			});
-		});
+		}, { timeout: 30000 });
 	},
 	importTranslations: async (sourceFile, fileContent, options) => {
 		let data: unknown;
