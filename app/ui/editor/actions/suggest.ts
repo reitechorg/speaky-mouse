@@ -174,6 +174,7 @@ export async function ApproveTranslation(formData: FormData) {
 		db.translation.updateMany({
 			where: {
 				localeStringId: translation.localeStringId,
+				language: translation.language,
 				approvedAt: {
 					not: null,
 				},
